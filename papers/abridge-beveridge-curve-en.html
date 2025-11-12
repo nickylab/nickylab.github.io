@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beveridge Curve — A Key Indicator of Labor Markets and Macroeconomic Conditions (aBRIDGEd, PIER) — English Edition</title>
+<meta name="description" content="English translation of the PIER aBRIDGEd article on Thailand’s Beveridge curve, data sources, and policy relevance.">
+<link rel="canonical" href="https://www.pier.or.th/en/abridged/2025/04/">
+<meta property="og:title" content="Beveridge Curve — A Key Indicator of Labor Markets and Macroeconomic Conditions">
+<meta property="og:description" content="Constructing Thailand’s Beveridge curve from two alternative data sources and discussing labor market tightness and policy use cases.">
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<style>
+  :root {
+    --fg:#0b1222; --muted:#5b6578; --panel:#f5f7fb; --border:#e2e8f0; --link:#0d62ff;
+  }
+  html, body { margin:0; padding:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:var(--fg); background:#fff; }
+  main { max-width: 900px; margin: 40px auto; padding: 0 16px 80px; }
+  header.article { margin-bottom: 18px; }
+  h1 { font-size: 32px; font-weight: 800; margin: 0 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 6px; }
+  .byline { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  .meta { display:flex; gap:12px; align-items:center; color:var(--muted); font-size:14px; }
+  .tag { display:inline-block; background:var(--panel); border:1px solid var(--border); padding:3px 8px; border-radius:999px; font-size:12px; }
+  figure { margin: 20px 0; padding:12px; background:var(--panel); border:1px solid var(--border); border-radius:12px; }
+  figcaption { color:var(--muted); font-size: 13px; margin-top: 8px; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+  h2 { margin-top: 28px; margin-bottom: 8px; font-size: 24px; }
+  h3 { margin-top: 18px; margin-bottom: 6px; font-size: 18px; }
+  .ref { font-size: 14px; color: var(--muted); }
+  footer { margin-top: 48px; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <header class="article">
+    <div class="tag">aBRIDGEd — English</div>
+    <h1>Beveridge Curve: A Key Indicator of Labor Markets and Macroeconomic Conditions</h1>
+    <p class="lede">Constructing Thailand’s Beveridge curve from two alternative data sources</p>
+    <div class="byline">By Nuarpear Lekfuangfu, Nick Lertmethaphat, and Pucktada Treeratpituk</div>
+    <div class="meta"><span>Published: July 15, 2025</span><span>•</span><a href="https://www.pier.or.th/en/abridged/2025/04/">Original Thai page</a></div>
+  </header>
+
+  <p><strong>Abstract:</strong> The Beveridge curve captures the relationship between unemployment and job vacancies. It helps us track shifts in labor-market conditions, so it has become a core tool in macroeconomic analysis for both labor policy and monetary policy. Because the Beveridge curve reflects <em>labor-market tightness</em>, central banks can use it alongside the Phillips curve to better understand how labor-market dynamics relate to inflation.</p>
+
+  <p>Thailand has not routinely produced a Beveridge curve, largely because of data limitations, especially the lack of a reliable time series on vacancies. This note illustrates how to construct a Beveridge curve for Thailand by leveraging two relevant sources: (1) administrative statistics from the Department of Employment, Ministry of Labor, and (2) online job-platform data. We outline how to compute vacancy and jobseeker measures from each source, discuss coverage differences, and show how the curve can be assembled for Thai labor-market monitoring.</p>
+
+  <h2>Why the Beveridge curve matters</h2>
+  <p>The Beveridge curve shows a negative relationship between unemployment (U) and vacancies (V). When vacancies rise, unemployment tends to fall. Movements <em>along</em> a given curve reflect cyclical tightness or slack. In tight labor markets, unemployment is low while vacancies are high, which is typically associated with wage pressure and appears in the upper left of the curve. In slack markets, we observe the opposite, shown in the lower right.</p>
+  <p>By contrast, <em>shifts</em> of the curve reflect changes in matching efficiency. An inward shift suggests improved matching, consistent with better information flows or more efficient intermediation. An outward shift suggests worse matching due to structural change or frictions that make it harder to connect jobseekers with openings. As a result, central banks use the Beveridge curve, together with the Phillips curve, to diagnose the sources of inflationary pressure and gauge how quickly wages may adjust.</p>
+
+  <figure>
+    <img src="https://www.pier.or.th/static/d60455c68716b5c8544b5a64e7e91c05/af8c7/img_1.png" alt="Illustrative Beveridge curve scatter" style="width:100%;height:auto;border-radius:8px;">
+    <figcaption>Illustrative Beveridge curve. Source: Bureau of Labor Statistics and FRED (for the U.S. example discussed in the original article).</figcaption>
+  </figure>
+
+  <h2>Building a Beveridge curve for Thailand</h2>
+  <p>Thailand faces practical hurdles because there is no single, long-running official vacancy series that covers the whole economy. Still, we can combine two sources to approximate vacancies and job search intensity, then construct a curve:</p>
+  <h3>Vacancies</h3>
+  <ol>
+    <li><strong>Department of Employment (DOE) monthly postings.</strong> Publicly available aggregates begin in January 2014 and extend to the present. These reflect employers who use DOE channels (on-site and online), so coverage is incomplete across all sectors.</li>
+    <li><strong>Online job-platform postings.</strong> Employers post openings directly on job platforms. These data require additional processing since they are unstructured and must be mapped to standard occupation codes using machine-learning tools.</li>
+  </ol>
+  <p>Unemployment is available from Thailand’s official labor force survey. For the job-platform data, we harmonize titles and map them to ISCO-compatible codes, following our related work. See Lertmethaphat et&nbsp;al. (2025) for details.</p>
+
+  <h2>Examples from Thailand</h2>
+  <p><strong>Labor-market tightness (V/U).</strong> Using DOE data, the vacancy-to-jobseeker ratio hovered just under 1 during the years prior to January 2020, implying more jobseekers than openings. The ratio rose after 2020 and reached about 3.6 in late 2023, indicating tighter conditions. From the same source we can also construct a Beveridge curve for the DOE-covered segment of the market.</p>
+  <p><strong>Monthly Beveridge curves.</strong> A DOE-based monthly curve for November 2020 through November 2021 displays an atypical shape with high month-to-month volatility. This short, post-pandemic window makes it hard to separate movements along the curve from shifts of the curve itself.</p>
+  <p><strong>Online-platform curve.</strong> A platform-based curve for the same period exhibits the more familiar downward slope. From late 2020 to mid-2021, vacancies trend down while jobseeker measures increase, consistent with easing tightness. Volatility is moderate compared with DOE aggregates.</p>
+
+  <h2>Looking ahead</h2>
+  <p>The Beveridge curve and the tightness index are widely used abroad as core indicators for diagnosing labor-market conditions and supporting policy design. Our demonstration shows that, despite data limitations, Thailand can assemble a reasonable, repeatable approach by combining official DOE statistics with online-platform measures. Each source covers different parts of the market — DOE data skew toward regional placements while platform data over-represent urban, higher-skill jobs. Using them together yields a more complete picture for policymakers.</p>
+  <p>We encourage continued collection and publication of vacancy and jobseeker series so that Thailand can monitor labor-market behavior over long horizons at monthly frequency, by sector and region.</p>
+
+  <hr>
+  <section class="ref">
+    <h3>References</h3>
+    <p>Lekfuangfu, N., &amp; Lertmethaphat, N. (2025). <em>Building Thailand’s Beveridge Curve: New Insights of Thailand’s Labour Markets with Internet Job Platforms</em> (Discussion Paper No. 232). Puey Ungphakorn Institute for Economic Research.</p>
+    <p>Lertmethaphat, N., Lekfuangfu, N., &amp; Treeratpituk, P. (2025). <em>Exploring the Thai Job Market Through the Lens of Natural Language Processing and Machine Learning</em> (Discussion Paper No. 228). Puey Ungphakorn Institute for Economic Research.</p>
+  </section>
+
+<footer>
+  This file was automatically translated from the official Thai version of the
+  aBRIDGEd article published on PIER. While every effort was made to ensure
+  accuracy, some translations or interpretations may differ from the original.
+</footer>
+</main>
+</body>
+</html>
