@@ -3,9 +3,48 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Nick’s Papers and Projects</title>
   <meta name="color-scheme" content="light dark" />
+
+  <!-- Title + basic SEO -->
+  <title>Nick Lertmethaphat | Papers and Projects</title>
+  <meta name="description" content="Portfolio of Nick Lertmethaphat — applied economics, machine learning, econometrics, and LLM workflows. Clean methods, reproducible results, production-ready code." />
+  <meta name="author" content="Nick Lertmethaphat" />
+  <link rel="canonical" href="https://nickylab.github.io/" />
+
+  <!-- Open Graph / Twitter -->
+  <meta property="og:title" content="Nick Lertmethaphat | Papers and Projects" />
+  <meta property="og:description" content="Applied economics, ML, econometrics, and LLM workflows." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://nickylab.github.io/" />
+  <!-- If you later add /assets/img/og-image.png, keep the line below. Otherwise remove it. -->
+  <meta property="og:image" content="https://nickylab.github.io/assets/img/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Nick Lertmethaphat | Papers and Projects" />
+  <meta name="twitter:description" content="Applied economics, ML, econometrics, and LLM workflows." />
+
+  <!-- JSON-LD structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Nick Lertmethaphat",
+    "alternateName": "Nick",
+    "jobTitle": "Senior Data Scientist",
+    "url": "https://nickylab.github.io/",
+    "sameAs": ["https://github.com/nickylab"]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Nick’s Papers and Projects",
+    "url": "https://nickylab.github.io/"
+  }
+  </script>
+
   <style>
+    /* your existing CSS block unchanged */
     :root{
       --bg: #ffffff;
       --fg: #111111;
@@ -36,7 +75,6 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
-
     /* Top nav */
     .nav{
       position: sticky; top:0; z-index: 20;
@@ -65,7 +103,6 @@
       font-size: 14px;
       opacity: .9;
     }
-
     /* Hero */
     .hero{
       max-width: var(--maxw);
@@ -114,7 +151,6 @@
     }
     .btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow); }
     .btn.secondary{ background: transparent; color: var(--fg); }
-
     /* Sections */
     .section{
       max-width: var(--maxw);
@@ -134,7 +170,6 @@
     @media (max-width: 860px){
       .grid{ gap: 12px; }
     }
-
     .card{
       grid-column: span 6;
       background: var(--card);
@@ -164,13 +199,11 @@
     }
     .desc{ color: var(--muted); margin: 0 0 14px; }
     .meta{ font-size: 13px; color: var(--muted); margin-top: auto; }
-
     .link{
       display:inline-flex; align-items:center; gap:8px;
       color: var(--accent); text-decoration: none; font-weight: 600;
     }
     .link svg{ width: 14px; height: 14px; }
-
     /* Footer */
     footer{
       max-width: var(--maxw);
@@ -184,7 +217,6 @@
       padding-top: 22px;
     }
     .dot{ width:6px; height:6px; border-radius:50%; background: var(--muted); opacity:.5; display:inline-block; margin: 0 8px; }
-
     /* Subtle entrance */
     .fade-in{ opacity:0; transform: translateY(6px); animation: fade .5s ease forwards; }
     .fade-in:nth-child(1){ animation-delay:.05s}
@@ -193,6 +225,10 @@
     @keyframes fade{ to{ opacity:1; transform:none } }
   </style>
 </head>
+
+
+
+
 <body>
   <!-- Top nav -->
   <nav class="nav">
@@ -202,7 +238,7 @@
         <a href="/" aria-label="Home">nickylab</a>
       </div>
       <div class="nav-actions">
-        <a href="mailto:you@example.com" title="Email Nick">Contact</a>
+        <a href="mailto:nick.lertmethaphat@gmail.com" title="Email Nick">Contact</a>
       </div>
     </div>
   </nav>
