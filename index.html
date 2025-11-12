@@ -92,11 +92,15 @@
       display: inline-flex; gap:10px; align-items:center;
       font-weight: 600; letter-spacing: .2px;
     }
-    .brand-icon{
-      width: 18px; height: 18px; border-radius: 4px;
-      background: radial-gradient(120% 120% at 20% 0%, #8ec5ff 0%, #0071e3 40%, #002b6b 100%);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+
+    .brand-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      object-fit: contain;
     }
+
+
     .nav a{
       color: var(--fg);
       text-decoration: none;
@@ -223,6 +227,17 @@
     .fade-in:nth-child(2){ animation-delay:.12s}
     .fade-in:nth-child(3){ animation-delay:.18s}
     @keyframes fade{ to{ opacity:1; transform:none } }
+
+    [hidden] { display: none !important; }
+
+    .btn { transition: transform .15s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease; }
+
+
+    /* Prevent visited links from turning purple */
+    footer a:visited {
+  color: inherit;
+}
+
   </style>
 </head>
 
@@ -234,7 +249,7 @@
   <nav class="nav">
     <div class="nav-inner">
       <div class="brand">
-        <span class="brand-icon" aria-hidden="true"></span>
+        <img src="assets/img/logo.png" alt="nickylab logo" class="brand-icon" width="20" height="20">
         <a href="/" aria-label="Home">nickylab</a>
       </div>
       <div class="nav-actions">
@@ -248,11 +263,13 @@
   <span class="eyebrow">Portfolio</span>
   <h1>Nick’s Papers and Projects</h1>
   <p class="sub">Applied economics, ML, and LLM workflows. Clean methods, reproducible results, production-ready code.</p>
-  <div class="cta">
-    <a class="btn primary" href="#papers">View Papers</a>
-    <a class="btn secondary" href="#projects">View Projects</a>
-    <a class="btn secondary" href="#visualizations">View Visualizations</a>
+  <div class="cta" id="hero-cta">
+    <a class="btn primary" href="#all" data-target="all">All</a>
+    <a class="btn secondary" href="#papers" data-target="papers">Papers</a>
+    <a class="btn secondary" href="#projects" data-target="projects">Projects</a>
+    <a class="btn secondary" href="#visualizations" data-target="visualizations">Visualizations</a>
   </div>
+
 </header>
 
 
@@ -260,27 +277,7 @@
   <section id="papers" class="section">
     <h2>Papers</h2>
     <div class="grid">
-      <!-- Paper 1 -->
-      <article class="card fade-in">
-        <span class="kicker">Working Paper</span>
-        <h3><a class="link" href="papers/nowcasting.html">
-          Nowcasting GDP with Dynamic Factor Models
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a></h3>
-        <p class="desc">Mixed-frequency signals, real-time updates, Kalman filtering for robust nowcasts.</p>
-        <div class="meta">2025 • HTML • PDF</div>
-      </article>
 
-      <!-- Paper 2 -->
-      <article class="card fade-in">
-        <span class="kicker">Methods Note</span>
-        <h3><a class="link" href="papers/isco-classifier.html">
-          ISCO-08 Job Title Classifier
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a></h3>
-        <p class="desc">Large-scale text classification with XGBoost and baselines, tuned for Thai labor data.</p>
-        <div class="meta">2025 • HTML • Code</div>
-      </article>
 
       <!-- Paper 3 -->
       <article class="card fade-in">
@@ -314,6 +311,29 @@
         <p class="desc">Labor market data meets NLP</p>
         <div class="meta">2025 • HTML • PDF</div>
       </article>
+
+      <!-- Paper 1 -->
+      <article class="card fade-in">
+        <span class="kicker">Working Paper</span>
+        <h3><a class="link" href="papers/nowcasting.html">
+          Nowcasting GDP with Dynamic Factor Models
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a></h3>
+        <p class="desc">Mixed-frequency signals, real-time updates, Kalman filtering for robust nowcasts.</p>
+        <div class="meta">2025 • HTML • PDF</div>
+      </article>
+
+      <!-- Paper 2 -->
+      <article class="card fade-in">
+        <span class="kicker">Methods Note</span>
+        <h3><a class="link" href="papers/isco-classifier.html">
+          ISCO-08 Job Title Classifier
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a></h3>
+        <p class="desc">Large-scale text classification with XGBoost and baselines, tuned for Thai labor data.</p>
+        <div class="meta">2025 • HTML • Code</div>
+      </article>
+
 
     </div>
   </section>
@@ -389,8 +409,63 @@
     </div>
   </footer>
 
-  <script>
-    document.getElementById("y").textContent = new Date().getFullYear();
-  </script>
+
+
+<script>
+  (function () {
+    const SECTIONS = ["papers", "projects", "visualizations"];
+    const elems = Object.fromEntries(SECTIONS.map(id => [id, document.getElementById(id)]));
+    const heroCta = document.getElementById("hero-cta");
+    const ctaBtns = heroCta ? Array.from(heroCta.querySelectorAll('a[data-target]')) : [];
+
+    function showOnly(target) {
+      const t = (target || "").toLowerCase();
+
+      SECTIONS.forEach(id => {
+        const el = elems[id];
+        if (!el) return;
+        if (t === "all" || t === "" || t === null) el.hidden = false;
+        else el.hidden = (id !== t);
+      });
+
+      if (t && t !== "all" && elems[t]) {
+        elems[t].scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      updateHeroActive(t || "all");
+    }
+
+    function updateHeroActive(target) {
+      ctaBtns.forEach(btn => {
+        const isActive = btn.dataset.target === target || (target === "all" && btn.dataset.target === "all");
+        btn.classList.toggle("primary", isActive);
+        btn.classList.toggle("secondary", !isActive);
+        btn.setAttribute("aria-current", isActive ? "page" : "false");
+      });
+    }
+
+    // ✅ Fix: Default to "all" unless the hash matches a valid section
+    let initial = (location.hash || "").replace("#", "").toLowerCase();
+    if (!SECTIONS.includes(initial)) initial = "all";
+    showOnly(initial);
+
+    // React to hash changes
+    window.addEventListener("hashchange", () => {
+      let h = (location.hash || "").replace("#", "").toLowerCase();
+      if (!SECTIONS.includes(h)) h = "all";
+      showOnly(h);
+    });
+
+    // Footer year
+    const y = document.getElementById("y");
+    if (y) y.textContent = new Date().getFullYear();
+  })();
+</script>
+
+
+
+
 </body>
 </html>
