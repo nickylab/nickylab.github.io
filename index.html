@@ -243,16 +243,18 @@
     </div>
   </nav>
 
-  <!-- Hero -->
-  <header class="hero">
-    <span class="eyebrow">Portfolio</span>
-    <h1>Nick’s Papers and Projects</h1>
-    <p class="sub">Applied economics, ML, and LLM workflows. Clean methods, reproducible results, production-ready code.</p>
-    <div class="cta">
-      <a class="btn primary" href="#papers">View Papers</a>
-      <a class="btn secondary" href="#projects">View Projects</a>
-    </div>
-  </header>
+<!-- Hero -->
+<header class="hero">
+  <span class="eyebrow">Portfolio</span>
+  <h1>Nick’s Papers and Projects</h1>
+  <p class="sub">Applied economics, ML, and LLM workflows. Clean methods, reproducible results, production-ready code.</p>
+  <div class="cta">
+    <a class="btn primary" href="#papers">View Papers</a>
+    <a class="btn secondary" href="#projects">View Projects</a>
+    <a class="btn secondary" href="#visualizations">View Visualizations</a>
+  </div>
+</header>
+
 
   <!-- Papers -->
   <section id="papers" class="section">
@@ -279,6 +281,40 @@
         <p class="desc">Large-scale text classification with XGBoost and baselines, tuned for Thai labor data.</p>
         <div class="meta">2025 • HTML • Code</div>
       </article>
+
+      <!-- Paper 3 -->
+      <article class="card fade-in">
+        <span class="kicker">Microeconomics</span>
+        <h3><a class="link" href="papers/informal_SMEs.html">
+          Investigating Informal SMEs in Thailand
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a></h3>
+        <p class="desc">Unveiling over 1 million micro SMEs disguised as individuals</p>
+        <div class="meta">2025 • HTML • PDF</div>
+      </article>
+
+      <!-- Paper 4 -->
+      <article class="card fade-in">
+        <span class="kicker">Working Paper</span>
+        <h3><a class="link" href="https://www.pier.or.th/en/dp/232/">
+          Building Thailand’s Beveridge Curve: New Insights of Thailand’s Labour Markets with Internet Job Platforms
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a></h3>
+        <p class="desc">Data scraping & LLMs enable cutting edge labor market analysis</p>
+        <div class="meta">2025 • HTML • PDF</div>
+      </article>
+
+      <!-- Paper 5 -->
+      <article class="card fade-in">
+        <span class="kicker">Working Paper</span>
+        <h3><a class="link" href="https://www.pier.or.th/en/dp/228/">
+          Exploring the Thai Job Market Through the Lens of Natural Language Processing and Machine Learning
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a></h3>
+        <p class="desc">Labor market data meets NLP</p>
+        <div class="meta">2025 • HTML • PDF</div>
+      </article>
+
     </div>
   </section>
 
@@ -306,6 +342,41 @@
         </a></h3>
         <p class="desc">Retrieval pipelines, evaluation harness, and production patterns for regulatory text.</p>
         <div class="meta">Python • Vector DB • Eval</div>
+      </article>
+    </div>
+  </section>
+
+
+  <!-- Visualizations -->
+  <section id="visualizations" class="section">
+    <h2>Visualizations</h2>
+    <div class="grid">
+      <article class="card fade-in">
+        <span class="kicker">Interactive</span>
+        <h3>
+          <a class="link" href="viz/money_dist_plinko_v2.html">
+            Income Distribution Glider
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+        </h3>
+        <p class="desc">Plinko-style glider to visualize unequal flows into quintiles.</p>
+        <div class="meta">HTML • JS • Canvas</div>
+      </article>
+
+      <article class="card fade-in">
+        <span class="kicker">Charts</span>
+        <h3>
+          <a class="link" href="viz/nowcast-dashboard.html">
+            Nowcast Dashboard
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+        </h3>
+        <p class="desc">Mixed frequency updates and Kalman-filtered paths.</p>
+        <div class="meta">Chart.js • JSON</div>
       </article>
     </div>
   </section>
