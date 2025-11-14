@@ -75,6 +75,14 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
+    /* Meta links (e.g., PDF) should look like plain text */
+    .meta a,
+    .meta a:visited,
+    .meta a:hover,
+    .meta a:active {
+      color: inherit;
+      text-decoration: none;
+    }
     /* Top nav */
     .nav{
       position: sticky; top:0; z-index: 20;
@@ -261,44 +269,60 @@
 <!-- Hero -->
 <header class="hero">
   <span class="eyebrow">Portfolio</span>
-  <h1>Nick’s Papers and Projects</h1>
-  <p class="sub">Applied economics, ML, and LLM workflows. Clean methods, reproducible results, production-ready code.</p>
+  <!-- <h1>Nick’s Papers and Projects</h1> -->
+  <h1>Nick Lertmethaphat</h1>
+  <p class="sub">Data science, AI, and economic research for real-world decisions.</p>
   <div class="cta" id="hero-cta">
     <a class="btn primary" href="#all" data-target="all">All</a>
-    <a class="btn secondary" href="#papers" data-target="papers">Papers</a>
-    <a class="btn secondary" href="#projects" data-target="projects">Projects</a>
+    <a class="btn secondary" href="#research" data-target="research">Research &amp; Writing</a>
+    <a class="btn secondary" href="#toolbox" data-target="toolbox">Toolbox</a>
     <a class="btn secondary" href="#visualizations" data-target="visualizations">Visualizations</a>
   </div>
 
 </header>
 
 
-  <!-- Papers -->
-  <section id="papers" class="section">
-    <h2>Papers</h2>
+
+  <!-- Research & Writing -->
+  <section id="research" class="section">
+    <h2>Research &amp; Writing</h2>
     <div class="grid">
 
 
       <!-- Paper 3 -->
-      <article class="card fade-in">
+      <!-- <article class="card fade-in">
         <span class="kicker">Microeconomics</span>
-        <h3><a class="link" href="papers/informal_SMEs.html">
+        <h3> <a class="link" href="papers/informal_SMEs.html">
           Investigating Informal SMEs in Thailand
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a></h3>
         <p class="desc">Unveiling over 1 million micro SMEs disguised as individuals</p>
         <div class="meta">2025 • HTML • PDF</div>
+      </article> -->
+      <!-- Paper 3 -->
+      <article class="card fade-in">
+        <span class="kicker">Microeconomics</span>
+        <h3>
+          <a class="link" href="/wip.html">
+            Investigating Informal SMEs in Thailand
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </a>
+        </h3>
+        <p class="desc">Unveiling over 1 million micro SMEs disguised as individuals</p>
+        <div class="meta">2025 • Coming soon</div>
       </article>
 
       <!-- Paper 4 -->
       <article class="card fade-in">
         <span class="kicker">Article</span>
-        <h3><a class="link" href="papers/abridge-beveridge-curve-en.html">
+        <h3><a class="link" href="research/abridge-beveridge-curve-en.html">
           Beveridge Curve: A Key Indicator of Labor Markets and Macroeconomic Conditions
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a></h3>
         <p class="desc">Constructing Thailand’s Beveridge curve from alternative data sources & deep learning</p>
-        <div class="meta">2025 • HTML </div>
+        <div class="meta">2025</div>
       </article>
 
       <!-- Paper 4 -->
@@ -309,7 +333,7 @@
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a></h3>
         <p class="desc">Data scraping & LLMs enable cutting edge labor market analysis</p>
-        <div class="meta">2025 • HTML • PDF</div>
+        <div class="meta">2025 • <a href="https://www.pier.or.th/files/dp/pier_dp_232.pdf" target="_blank" rel="noopener">PDF</a></div>
       </article>
 
       <!-- Paper 5 -->
@@ -319,60 +343,56 @@
           Exploring the Thai Job Market Through the Lens of Natural Language Processing and Machine Learning
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a></h3>
-        <p class="desc">Labor market data meets NLP</p>
-        <div class="meta">2025 • HTML • PDF</div>
+        <p class="desc">Large-scale text classification with XGBoost, Neural Network, fine-tuned BERT, and LLMs.</p>
+        <div class="meta">2025 • <a href="https://www.pier.or.th/files/dp/pier_dp_228.pdf" target="_blank" rel="noopener">PDF</a></div>
       </article>
 
       <!-- Paper 1 -->
       <article class="card fade-in">
         <span class="kicker">Working Paper</span>
-        <h3><a class="link" href="papers/nowcasting.html">
+        <h3><a class="link" href="/wip.html">
           Nowcasting GDP with Dynamic Factor Models
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a></h3>
-        <p class="desc">Mixed-frequency signals, real-time updates, Kalman filtering for robust nowcasts.</p>
-        <div class="meta">2025 • HTML • PDF</div>
+        <p class="desc">Mixed-frequency signals, genentic algorithm optimizations, an array of ML/DL for robust nowcasts.</p>
+        <div class="meta">2025 • Coming soon</div>
       </article>
-
-      <!-- Paper 2 -->
-      <article class="card fade-in">
-        <span class="kicker">Methods Note</span>
-        <h3><a class="link" href="papers/isco-classifier.html">
-          ISCO-08 Job Title Classifier
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a></h3>
-        <p class="desc">Large-scale text classification with XGBoost and baselines, tuned for Thai labor data.</p>
-        <div class="meta">2025 • HTML • Code</div>
-      </article>
-
 
     </div>
   </section>
 
-  <!-- Projects -->
-  <section id="projects" class="section">
-    <h2>Projects</h2>
+  <!-- Toolbox -->
+  <section id="toolbox" class="section">
+    <h2>Toolbox</h2>
     <div class="grid">
       <!-- Project 1 -->
       <article class="card fade-in">
-        <span class="kicker">Impact Evaluation</span>
-        <h3><a class="link" href="projects/half-half.html">
-          Half-Half Stimulus Analysis
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a></h3>
-        <p class="desc">Stacked DiD with staggered adoption. Transparent cohorts, robust inference, clean visuals.</p>
-        <div class="meta">Econometrics • ATT • Visualization</div>
+        <span class="kicker">Forecasting Toolbox</span>
+        <h3>
+          <a class="link" href="/wip.html">
+            Time Series Forecasting Toolkit
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+        </h3>
+        <p class="desc">
+          Mixed-frequency handler, sequential feature selection (SFS), kernel PCA, and an array of ML/DL models wrapped in GA-based optimization, with SHAP for prediction explainability.
+        </p>
+        <div class="meta">Coming soon</div>
+        <!-- <div class="meta">Forecasting • ML/DL • Explainability</div> -->
       </article>
 
       <!-- Project 2 -->
       <article class="card fade-in">
         <span class="kicker">LLM Systems</span>
-        <h3><a class="link" href="projects/rag-supervision.html">
-          RAG for Supervisory Analytics
+        <h3><a class="link" href="/wip.html">
+          RAG for Job Title Classification
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a></h3>
-        <p class="desc">Retrieval pipelines, evaluation harness, and production patterns for regulatory text.</p>
-        <div class="meta">Python • Vector DB • Eval</div>
+        <p class="desc">Retrieval pipelines, leveraging ISCO-08 guidebook for maximum accuracy.</p>
+        <div class="meta">Coming soon</div>
+        <!-- <div class="meta">Python • RoBERTa • LLMs</div> -->
       </article>
     </div>
   </section>
@@ -399,7 +419,7 @@
       <article class="card fade-in">
         <span class="kicker">Charts</span>
         <h3>
-          <a class="link" href="viz/nowcast-dashboard.html">
+          <a class="link" href="/wip.html">
             Nowcast Dashboard
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -407,7 +427,8 @@
           </a>
         </h3>
         <p class="desc">Mixed frequency updates and Kalman-filtered paths.</p>
-        <div class="meta">Chart.js • JSON</div>
+        <div class="meta">Coming soon</div>
+        <!-- <div class="meta">Chart.js • JSON</div> -->
       </article>
     </div>
   </section>
@@ -424,7 +445,7 @@
 
 <script>
   (function () {
-    const SECTIONS = ["papers", "projects", "visualizations"];
+    const SECTIONS = ["research", "toolbox", "visualizations"];
     const elems = Object.fromEntries(SECTIONS.map(id => [id, document.getElementById(id)]));
     const heroCta = document.getElementById("hero-cta");
     const ctaBtns = heroCta ? Array.from(heroCta.querySelectorAll('a[data-target]')) : [];
@@ -457,7 +478,7 @@
       });
     }
 
-    // ✅ Fix: Default to "all" unless the hash matches a valid section
+    // Fix: Default to "all" unless the hash matches a valid section
     let initial = (location.hash || "").replace("#", "").toLowerCase();
     if (!SECTIONS.includes(initial)) initial = "all";
     showOnly(initial);
