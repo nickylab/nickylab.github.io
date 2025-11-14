@@ -1,6 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://nickylab.github.io/</loc></url>
-  <url><loc>https://nickylab.github.io/papers/nowcasting.html</loc></url>
-  <url><loc>https://nickylab.github.io/projects/half-half.html</loc></url>
+
+  <!-- Home -->
+  <url>
+    <loc>https://nickylab.github.io/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+    <lastmod>2025-02-25</lastmod>
+  </url>
+
+  <!-- Research & Writing -->
+  <url>
+    <loc>https://nickylab.github.io/research/abridge-beveridge-curve-en.html</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Visualizations -->
+  <url>
+    <loc>https://nickylab.github.io/viz/money_dist_plinko_v2.html</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Work-in-progress landing -->
+  <url>
+    <loc>https://nickylab.github.io/wip.html</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
 </urlset>
