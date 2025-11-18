@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Half Half Plus - Subsidy per Vendor</title>
+  <title>Half-Half Stimulus - Subsidy Distribution</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 
   <style>
     :root {
@@ -143,48 +144,460 @@
 
     canvas {
       max-height:420px;
+      height:320px;
+      width:100%;
+    }
+    .treemap-container {
+      width:100%;
+      height:320px;
     }
 
     @media (max-width:640px) {
       .card { padding:18px 16px 22px; }
       .title-block h1 { font-size:18px; }
     }
+
+    .view-tabs {
+      display:flex;
+      gap:8px;
+      margin-bottom:14px;
+      border-bottom:1px solid rgba(15,23,42,0.08);
+      padding-bottom:6px;
+    }
+
+    .view-tab {
+      border:1px solid rgba(148,163,184,0.4);
+      background:transparent;
+      font-size:13px;
+      padding:6px 12px;
+      cursor:pointer;
+      border-radius:999px;
+      color:#64748b;
+      display:inline-flex;
+      align-items:center;
+      transition:background 0.15s ease,color 0.15s ease,transform 0.1s ease,box-shadow 0.1s ease;
+    }
+
+    .view-tab.active {
+      background:#e5f0ff;
+      color:#0f172a;
+      border-color:rgba(37,99,235,0.7);
+      box-shadow:0 0 0 1px rgba(37,99,235,0.35);
+      transform:translateY(-1px);
+    }
+
+    .view-panel { display:none; }
+    .view-panel.active { display:block; }
+
+    .q-dashboard {
+      margin-top: 12px;
+    }
+    .q-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+    .q-summary {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .q-metric {
+      flex: 1 1 140px;
+      min-width: 140px;
+    }
+    .q-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .q-value {
+      font-weight: 600;
+      font-size: 18px;
+      color: #0f172a;
+    }
+    .q-sub {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .q-charts {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .q-chart-card {
+      flex: 1 1 45%;
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .q-chart-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #0f172a;
+    }
+    .q-chart {
+      width: 100%;
+      height: 140px;
+    }
   </style>
 </head>
 <body>
 <div class="card">
-  <div class="card-header">
-    <div class="title-block">
-      <h1>Subsidy per Vendor by Quintile</h1>
-      <p id="subtitle">All phases combined - baht per vendor</p>
+  <!-- Top tabs -->
+  <div class="view-tabs">
+    <button class="view-tab active" id="tab-distribution" type="button">
+      Stimulus Distribution
+    </button>
+    <button class="view-tab" id="tab-subsidy" type="button">
+      Subsidy per Vendor
+    </button>
+  </div>
+
+  <!-- View 1: Treemap -->
+  <div class="view-panel active" id="panel-distribution">
+    <div class="card-header">
+      <div class="title-block">
+        <h1>Share of Total Budget</h1>
+        <p>By vendor quintile</p>
+      </div>
     </div>
-    <div class="toggle-group">
-      <button class="toggle active" id="btn-total">
-        <span class="dot"></span>
-        Total per vendor
-      </button>
-      <button class="toggle alt" id="btn-monthly">
-        <span class="dot"></span>
-        Average per month per vendor
-      </button>
+    <div class="legend">
+      <div class="legend-item">
+        <span class="swatch total"></span>
+        <span>Share of budget (mock)</span>
+      </div>
+    </div>
+    <div id="hhTreeMap" class="treemap-container"></div>
+    <div class="q-dashboard">
+      <div class="q-title" id="q-title"></div>
+      <div class="q-summary">
+        <div class="q-metric">
+          <div class="q-label" id="q-budget-label">Total budget in current view</div>
+          <div class="q-value" id="q-budget"></div>
+          <div class="q-sub" id="q-share"></div>
+        </div>
+        <div class="q-metric">
+          <div class="q-label">Average phases per vendor</div>
+          <div class="q-value" id="q-phases"></div>
+          <div class="q-sub" id="q-phase-mode"></div>
+        </div>
+        <div class="q-metric">
+          <div class="q-label">Average subsidy per vendor</div>
+          <div class="q-value" id="q-avg-subsidy"></div>
+          <div class="q-sub">All phases combined (mock)</div>
+        </div>
+      </div>
+
+      <div class="q-charts">
+        <div class="q-chart-card">
+          <div class="q-chart-title">First phase participated (mock)</div>
+          <div id="q-phase-pie" class="q-chart"></div>
+        </div>
+        <div class="q-chart-card">
+          <div class="q-chart-title">Vendor subsidy distribution (mock)</div>
+          <div id="q-hist" class="q-chart"></div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="legend">
-    <div class="legend-item">
-      <span class="swatch total"></span>
-      <span>Total subsidy per vendor</span>
+  <!-- View 2: Bar chart (existing content) -->
+  <div class="view-panel" id="panel-subsidy">
+    <div class="card-header">
+      <div class="title-block">
+        <h1>Subsidy per Vendor by Quintile</h1>
+        <p id="subtitle">All phases combined - baht per vendor</p>
+      </div>
+      <div class="toggle-group">
+        <button class="toggle active" id="btn-total">
+          <span class="dot"></span>
+          Total per vendor
+        </button>
+        <button class="toggle alt" id="btn-monthly">
+          <span class="dot"></span>
+          Average per month per vendor
+        </button>
+      </div>
     </div>
-    <div class="legend-item">
-      <span class="swatch monthly"></span>
-      <span>Monthly subsidy per vendor (mock)</span>
-    </div>
-  </div>
 
-  <canvas id="subsidyChart"></canvas>
+    <div class="legend">
+      <div class="legend-item">
+        <span class="swatch total"></span>
+        <span>Total subsidy per vendor</span>
+      </div>
+      <div class="legend-item">
+        <span class="swatch monthly"></span>
+        <span>Monthly subsidy per vendor (mock)</span>
+      </div>
+    </div>
+
+    <canvas id="subsidyChart"></canvas>
+  </div>
 </div>
 
 <script>
+  // Tabs
+  const tabDistribution = document.getElementById("tab-distribution");
+  const tabSubsidy = document.getElementById("tab-subsidy");
+  const panelDistribution = document.getElementById("panel-distribution");
+  const panelSubsidy = document.getElementById("panel-subsidy");
+
+  function setView(view) {
+    if (view === "distribution") {
+      tabDistribution.classList.add("active");
+      tabSubsidy.classList.remove("active");
+      panelDistribution.classList.add("active");
+      panelSubsidy.classList.remove("active");
+      // Reset dashboard to overall stats when returning to this view
+      setQuintileStats("Overall");
+    } else {
+      tabDistribution.classList.remove("active");
+      tabSubsidy.classList.add("active");
+      panelDistribution.classList.remove("active");
+      panelSubsidy.classList.add("active");
+    }
+  }
+
+  tabDistribution.addEventListener("click", () => setView("distribution"));
+  tabSubsidy.addEventListener("click", () => setView("subsidy"));
+
+  // Stimulus distribution treemap using ECharts
+  const treeDom = document.getElementById("hhTreeMap");
+  const treeChart = echarts.init(treeDom);
+
+  const treeData = [
+    { name: "Fifth (Top 20%)",       qKey: "Fifth (Top 20%)", value: 80, itemStyle: { color: "#002766" } },
+    { name: "Fourth",                qKey: "Fourth",          value: 14, itemStyle: { color: "#164da8" } },
+    { name: "Third",                 qKey: "Third",           value:  3, itemStyle: { color: "#4b7ad8" } },
+    { name: "Second",                qKey: "Second",          value:  2, itemStyle: { color: "#8fb1f0" } },
+    { name: "First (Bottom 20%)",    qKey: "First (Bottom 20%)",           value:  1, itemStyle: { color: "#b30000" } }
+  ];
+
+  const treeOption = {
+    tooltip: {
+      formatter: info => {
+        const d = info.data;
+        return `${d.name}: ${d.value}% of budget (mock)`;
+      }
+    },
+    series: [
+      {
+        type: "treemap",
+        roam: false,
+        nodeClick: false,
+        breadcrumb: { show: false },
+        data: treeData,
+        label: {
+          show: true,
+          formatter: "{b}",
+          color: "#ffffff",
+          fontFamily: "system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",
+          fontWeight: "600",
+          fontSize: 14
+        },
+        itemStyle: {
+          borderColor: "#ffffff",
+          borderWidth: 3,
+          gapWidth: 2
+        }
+      }
+    ]
+  };
+
+  treeChart.setOption(treeOption);
+
+  // Mock quintile stats with updated totalBudget values
+  const quintileStats = {
+    "Overall": {
+      share: 100,
+      totalBudget: 216000000000,
+      avgPhases: 3.2,
+      phaseSplit: [0.30,0.24,0.19,0.15,0.12],
+      histogram: [120,240,300,180],
+      // Share of vendors by number of phases joined (1–5)
+      phaseCountDist: [0.08,0.22,0.36,0.22,0.12]
+    },
+    "Fifth (Top 20%)": {
+      share: 80,
+      totalBudget: 172800000000,
+      avgPhases: 3.8,
+      phaseSplit: [0.45,0.25,0.15,0.10,0.05],
+      histogram: [140,260,310,190],
+      phaseCountDist: [0.04,0.16,0.34,0.30,0.16]
+    },
+    "Fourth": {
+      share: 14,
+      totalBudget: 30240000000,
+      avgPhases: 3.1,
+      phaseSplit: [0.35,0.25,0.18,0.13,0.09],
+      histogram: [110,190,220,130],
+      phaseCountDist: [0.06,0.20,0.34,0.26,0.14]
+    },
+    "Third": {
+      share: 3,
+      totalBudget: 6480000000,
+      avgPhases: 2.7,
+      phaseSplit: [0.28,0.24,0.20,0.16,0.12],
+      histogram: [90,150,170,100],
+      phaseCountDist: [0.10,0.26,0.32,0.20,0.12]
+    },
+    "Second": {
+      share: 2,
+      totalBudget: 4320000000,
+      avgPhases: 2.3,
+      phaseSplit: [0.22,0.22,0.20,0.18,0.18],
+      histogram: [70,120,140,90],
+      phaseCountDist: [0.16,0.30,0.28,0.16,0.10]
+    },
+    "First (Bottom 20%)": {
+      share: 1,
+      totalBudget: 2160000000,
+      avgPhases: 1.9,
+      phaseSplit: [0.18,0.20,0.20,0.20,0.22],
+      histogram: [60,100,110,70],
+      phaseCountDist: [0.22,0.32,0.24,0.14,0.08]
+    }
+  };
+
+  // DOM elements for dashboard summary
+  const budgetEl = document.getElementById("q-budget");
+  const shareEl = document.getElementById("q-share");
+  const phasesEl = document.getElementById("q-phases");
+  const avgSubEl = document.getElementById("q-avg-subsidy");
+  const titleEl = document.getElementById("q-title");
+  const budgetLabelEl = document.getElementById("q-budget-label");
+  const phaseModeEl = document.getElementById("q-phase-mode");
+
+  // Vendors per quintile (mock)
+  const vendorsPerQuintile = 1300000 / 5;
+
+  const pieDom = document.getElementById("q-phase-pie");
+  const histDom = document.getElementById("q-hist");
+  const phasePie = echarts.init(pieDom);
+  const histChart = echarts.init(histDom);
+
+  const phaseLabels = ["Phase 1","Phase 2","Phase 3","Phase 4","Phase 5"];
+  const histBins = ["0-50k","50-100k","100-150k","150k+"];
+
+  // Utility function to format baht amounts
+  function formatBaht(num) {
+    if (num >= 1e9) return (num / 1e9).toFixed(1) + "B";
+    if (num >= 1e6) return (num / 1e6).toFixed(1) + "M";
+    if (num >= 1e3) return (num / 1e3).toFixed(1) + "K";
+    return num.toString();
+  }
+
+  // Function to update dashboard stats for selected quintile
+  function setQuintileStats(name) {
+    const s = quintileStats[name];
+    if (!s) return;
+
+    // Summary cards
+    budgetEl.textContent = formatBaht(s.totalBudget) + " baht";
+    shareEl.textContent = s.share + "% of total budget";
+    phasesEl.textContent = s.avgPhases.toFixed(1);
+
+    // Dominant phase-count share (x% of vendors joined y phases)
+    if (s.phaseCountDist) {
+      let maxIdx = 0;
+      let maxVal = s.phaseCountDist[0];
+      for (let i = 1; i < s.phaseCountDist.length; i++) {
+        if (s.phaseCountDist[i] > maxVal) {
+          maxVal = s.phaseCountDist[i];
+          maxIdx = i;
+        }
+      }
+      const pct = Math.round(maxVal * 100);
+      const phasesJoined = maxIdx + 1;
+      const plural = phasesJoined > 1 ? "phases" : "phase";
+      phaseModeEl.textContent = `${pct}% of vendors joined ${phasesJoined} ${plural}`;
+    } else {
+      phaseModeEl.textContent = "";
+    }
+
+    const avgSubsidy = s.totalBudget / vendorsPerQuintile;
+    avgSubEl.textContent = formatBaht(avgSubsidy) + " per vendor";
+
+    if (name === "Overall") {
+      titleEl.textContent = "Statistical summary: All vendors";
+      budgetLabelEl.textContent = "Total budget across all vendors";
+    } else {
+      titleEl.textContent = `Statistical summary: ${name} quintile vendors`;
+      budgetLabelEl.textContent = `Total budget received`;
+    }
+
+    // Phase participation pie (uses phaseSplit array)
+    const pieData = phaseLabels.map((label, idx) => ({
+      name: label,
+      value: s.phaseSplit[idx] || 0
+    }));
+
+    phasePie.setOption({
+      tooltip: { trigger: "item", formatter: "{b}: {d}%" },
+      series: [
+        {
+          type: "pie",
+          radius: ["45%","70%"],
+          avoidLabelOverlap: true,
+          label: {
+            show: true,
+            formatter: "{b}",
+            color: "#0f172a",
+            fontSize: 11
+          },
+          labelLine: { show: true },
+          data: pieData
+        }
+      ]
+    });
+
+    // Vendor subsidy distribution histogram (uses histogram array)
+    histChart.setOption({
+      tooltip: { trigger: "axis" },
+      grid: { left: 40, right: 10, top: 20, bottom: 40 },
+      xAxis: {
+        type: "category",
+        data: histBins,
+        axisLabel: { color: "#64748b", rotate: -30 }
+      },
+      yAxis: {
+        type: "value",
+        axisLabel: { color: "#64748b" }
+      },
+      series: [
+        {
+          type: "bar",
+          data: s.histogram,
+          itemStyle: { color: "#4f8df0" },
+          barWidth: "55%"
+        }
+      ]
+    });
+  }
+
+  // Initialize dashboard with overall stats
+  setQuintileStats("Overall");
+
+  // Clicking on treemap tiles updates the dashboard
+  treeChart.on("click", params => {
+    const d = params && params.data;
+    if (!d) return;
+    const key = d.qKey || d.name;
+    if (key && quintileStats[key]) {
+      setQuintileStats(key);
+    }
+  });
+
   const ctx = document.getElementById("subsidyChart").getContext("2d");
 
   // Order top to bottom: Fifth - First
@@ -311,6 +724,12 @@
 
   btnTotal.addEventListener("click", () => setMode("total"));
   btnMonthly.addEventListener("click", () => setMode("monthly"));
+
+  window.addEventListener("resize", () => {
+    treeChart.resize();
+    phasePie.resize();
+    histChart.resize();
+  });
 </script>
 </body>
 </html>
