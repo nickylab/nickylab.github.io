@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Subsidy by Quintile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --demo-blue:#0b63ce;
+      --gop-red:#c51e3a;
+      --bg-dark:#0b1220;
+      --panel:#ffffff;
+      --muted:#7a8496;
+      --axis:#cbd5e1;
+    }
+
+    * { box-sizing:border-box; }
+
+    body {
+      margin:0;
+      padding:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      background:linear-gradient(135deg,var(--demo-blue),var(--gop-red));
+      color:#f9fafb;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+    }
+
+    .card {
+      width:100%;
+      max-width:900px;
+      background:var(--panel);
+      border-radius:18px;
+      box-shadow:0 18px 45px rgba(0,0,0,0.28);
+      padding:22px 26px 28px;
+    }
+
+    .card-header {
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      margin-bottom:14px;
+    }
+
+    .title-block h1 {
+      margin:0 0 4px;
+      font-size:22px;
+      color:#0b1220;
+      letter-spacing:0.03em;
+      text-transform:uppercase;
+    }
+
+    .title-block p {
+      margin:0;
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    .toggle-group {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    button.toggle {
+      border-radius:999px;
+      border:1px solid rgba(15,23,42,0.16);
+      padding:6px 14px;
+      font-size:13px;
+      background:#f1f5f9;
+      color:#0f172a;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      transition:background 0.15s ease, color 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
+    }
+
+    button.toggle span.dot {
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background:var(--demo-blue);
+    }
+
+    button.toggle.alt span.dot {
+      background:var(--gop-red);
+    }
+
+    button.toggle.active {
+      background:linear-gradient(135deg,var(--demo-blue),var(--gop-red));
+      color:#f9fafb;
+      border-color:transparent;
+      box-shadow:0 0 0 1px rgba(15,23,42,0.12);
+      transform:translateY(-1px);
+    }
+
+    button.toggle:focus-visible {
+      outline:2px solid var(--demo-blue);
+      outline-offset:2px;
+    }
+
+    .legend {
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:center;
+      margin-bottom:4px;
+    }
+
+    .legend-item {
+      display:flex;
+      align-items:center;
+      gap:6px;
+      font-size:11px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:0.08em;
+    }
+
+    .legend-swatch {
+      width:12px;
+      height:12px;
+      border-radius:3px;
+      background:linear-gradient(135deg,var(--demo-blue),var(--gop-red));
+    }
+
+    canvas {
+      max-height:420px;
+    }
+
+    @media (max-width:640px) {
+      .card {
+        padding:18px 16px 22px;
+      }
+      .card-header {
+        align-items:flex-start;
+      }
+      .title-block h1 {
+        font-size:18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-header">
+      <div class="title-block">
+        <h1>Average Subsidy per Vendor</h1>
+        <p id="subtitle">All phases combined • Thai stimulus program</p>
+      </div>
+      <div class="toggle-group">
+        <button class="toggle active" id="btn-total">
+          <span class="dot"></span>
+          All phases combined
+        </button>
+        <button class="toggle alt" id="btn-monthly">
+          <span class="dot"></span>
+          Per month average
+        </button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item">
+        <span class="legend-swatch"></span>
+        <span>Democrat blue and Republican red theme</span>
+      </div>
+    </div>
+
+    <canvas id="subsidyChart"></canvas>
+  </div>
+
+  <script>
+    // Base data - average subsidy per vendor in baht, all phases combined
+    const quintiles = ["First","Second","Third","Fourth","Fifth"];
+    const totalSubsidy = [4163,19783,51588,126021,578494];
+
+    // Assumed number of months - adjust if you want a different project length
+    const months = 12;
+    const monthlySubsidy = totalSubsidy.map(v => v / months);
+
+    const ctx = document.getElementById("subsidyChart").getContext("2d");
+
+    const baseGradient = ctx.createLinearGradient(0,0,800,0);
+    baseGradient.addColorStop(0,"#0b63ce");  // Democrat blue
+    baseGradient.addColorStop(1,"#c51e3a");  // Republican red
+
+    const chartConfig = {
+      type: "bar",
+      data: {
+        labels: quintiles,
+        datasets: [{
+          label: "Baht per vendor",
+          data: totalSubsidy,
+          backgroundColor: baseGradient,
+          borderColor: "#0f172a",
+          borderWidth: 1.2,
+          borderRadius: 7,
+          barThickness: 26,
+          hoverBackgroundColor: baseGradient
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+          padding: { left:0, right:10, top:4, bottom:2 }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: {
+              color: "rgba(148,163,184,0.35)"
+            },
+            ticks: {
+              color: "#64748b",
+              callback: value => value.toLocaleString("en-US")
+            },
+            title: {
+              display: true,
+              text: "Baht",
+              color: "#0f172a",
+              font: { size: 12, weight: "600" }
+            }
+          },
+          y: {
+            grid: { display:false },
+            ticks: {
+              color: "#0f172a",
+              font: { weight: "600" }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const v = context.raw;
+                return " " + v.toLocaleString("en-US",{maximumFractionDigits:0}) + " baht";
+              }
+            }
+          },
+          title: {
+            display: false
+          }
+        },
+        animation: {
+          duration: 450,
+          easing: "easeOutQuad"
+        }
+      }
+    };
+
+    const subsidyChart = new Chart(ctx, chartConfig);
+
+    // Toggle logic
+    const btnTotal = document.getElementById("btn-total");
+    const btnMonthly = document.getElementById("btn-monthly");
+    const subtitle = document.getElementById("subtitle");
+
+    function setMode(mode) {
+      if (mode === "total") {
+        subsidyChart.data.datasets[0].data = totalSubsidy;
+        subsidyChart.options.scales.x.title.text = "Baht (all phases combined)";
+        subtitle.textContent = "All phases combined • Thai stimulus program";
+        btnTotal.classList.add("active");
+        btnMonthly.classList.remove("active");
+      } else {
+        subsidyChart.data.datasets[0].data = monthlySubsidy;
+        subsidyChart.options.scales.x.title.text = "Baht per month (average)";
+        subtitle.textContent = "Per month average • assumes " + months + " months in total";
+        btnMonthly.classList.add("active");
+        btnTotal.classList.remove("active");
+      }
+      subsidyChart.update();
+    }
+
+    btnTotal.addEventListener("click", () => setMode("total"));
+    btnMonthly.addEventListener("click", () => setMode("monthly"));
+  </script>
+</body>
+</html>
