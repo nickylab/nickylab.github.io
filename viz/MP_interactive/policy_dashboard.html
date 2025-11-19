@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MPC Policy Rate Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <!-- Plotly for charts -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <!-- PapaParse for CSV parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --fg: #0b1222;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --card: #ffffff;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    header {
+      max-width: 1100px;
+      margin: 24px auto 8px;
+      padding: 0 16px;
+    }
+    h1 {
+      margin: 0 0 4px;
+      font-size: 26px;
+      font-weight: 800;
+    }
+    .lede {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    main {
+      max-width: 1100px;
+      margin: 0 auto 32px;
+      padding: 0 16px 32px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 16px;
+      box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+      margin-bottom: 16px;
+    }
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+    .scenario-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 2fr auto;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .scenario-row input[type="text"] {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .scenario-row input[type="file"] {
+      font-size: 12px;
+    }
+    .scenario-row label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .scenario-row button {
+      border: none;
+      background: transparent;
+      color: #ef4444;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0 4px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 13px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--fg);
+      border-color: var(--border);
+    }
+    .btn + .btn {
+      margin-left: 8px;
+    }
+    .step-actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    #dashboard-step {
+      display: none;
+    }
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    @media (min-width: 960px) {
+      .charts-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    .chart-box {
+      min-height: 280px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      text-align: right;
+    }
+    th:first-child, td:first-child { text-align: left; }
+    th {
+      background: #f9fafb;
+      font-weight: 600;
+    }
+    caption {
+      caption-side: top;
+      text-align: left;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--muted);
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #e0f2fe;
+      color: #0369a1;
+      font-size: 11px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>MPC Policy Rate Projection Dashboard</h1>
+  <p class="lede">
+    Upload MPC projection CSVs, give them names and colors, then compare policy rate paths and GDP growth across scenarios.
+  </p>
+</header>
+
+<main>
+  <!-- Step 1: config and upload -->
+  <section id="config-step" class="card">
+    <h2>1. Upload projection files</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">
+      Each file should have at least <code>period</code>, <code>i</code> (policy rate), and <code>dy4_r</code> (real GDP yoy) columns, similar to your chartpack CSVs.
+    </p>
+    <div id="scenario-list"></div>
+    <button id="add-scenario" class="btn btn-ghost">+ Add scenario</button>
+
+    <div class="step-actions">
+      <button id="build-dashboard" class="btn btn-primary">Next: Build dashboard</button>
+    </div>
+  </section>
+
+  <!-- Step 2: dashboard -->
+  <section id="dashboard-step">
+    <div class="card" style="margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+        <h2 style="margin:0;">2. Interactive dashboard</h2>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="pill" id="scenario-count-label"></span>
+          <button id="back-to-config" class="btn btn-ghost">Back to file selection</button>
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin:6px 0 0;">
+        Hover on the charts to inspect paths. Use the legend to toggle scenarios.
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="charts-grid">
+        <div class="chart-box" id="chart-policy"></div>
+        <div class="chart-box" id="chart-policy-step"></div>
+        <div class="chart-box" id="chart-gdp"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="summary-tables"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  // Global state
+  const maxScenarios = 6;
+  const scenarios = []; // {id, name, color, file, data}
+
+  const scenarioListEl   = document.getElementById("scenario-list");
+  const addScenarioBtn   = document.getElementById("add-scenario");
+  const buildDashboardBtn = document.getElementById("build-dashboard");
+  const configStepEl     = document.getElementById("config-step");
+  const dashboardStepEl  = document.getElementById("dashboard-step");
+  const backToConfigBtn  = document.getElementById("back-to-config");
+  const scenarioCountLbl = document.getElementById("scenario-count-label");
+  const summaryTablesEl  = document.getElementById("summary-tables");
+
+  // Helpers
+  function createScenarioRow(id, scenario) {
+    const row = document.createElement("div");
+    row.className = "scenario-row";
+    row.dataset.id = id;
+
+    row.innerHTML = `
+      <div>
+        <label>Scenario name</label>
+        <input type="text" placeholder="e.g. MPC Dec-25 (Day 1)" class="scenario-name">
+      </div>
+      <div>
+        <label>Line color</label>
+        <input type="color" class="scenario-color" value="${scenario.color}">
+      </div>
+      <div>
+        <label>CSV file</label>
+        <input type="file" accept=".csv" class="scenario-file">
+      </div>
+      <button type="button" class="remove-scenario" title="Remove scenario">&times;</button>
+    `;
+
+    // Wire remove
+    row.querySelector(".remove-scenario").addEventListener("click", () => {
+      const idx = scenarios.findIndex(s => s.id === id);
+      if (idx >= 0) scenarios.splice(idx, 1);
+      row.remove();
+    });
+
+    // Wire inputs to state
+    row.querySelector(".scenario-name").addEventListener("input", e => {
+      const s = scenarios.find(s => s.id === id);
+      if (s) s.name = e.target.value;
+    });
+    row.querySelector(".scenario-color").addEventListener("input", e => {
+      const s = scenarios.find(s => s.id === id);
+      if (s) s.color = e.target.value;
+    });
+    row.querySelector(".scenario-file").addEventListener("change", e => {
+      const s = scenarios.find(s => s.id === id);
+      const file = e.target.files[0] || null;
+      if (s) s.file = file;
+
+      if (file) {
+        // Extract name
+        let fname = file.name.replace(/\.[^/.]+$/, ""); // remove extension
+
+        // Convert "chartpackcsv_Dec25_Internal Briefing" into "MPC Dec-25 (Internal Briefing)"
+        // Step 1: extract month+year (e.g. Dec25)
+        const match = fname.match(/_(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(\d{2})/i);
+        let scenarioLabel = "";
+
+        if (match) {
+          const m = match[1];
+          const y = match[2];
+          scenarioLabel = `MPC ${m}-${y}`;
+        } else {
+          scenarioLabel = "MPC Scenario";
+        }
+
+        // Step 2: extract descriptor after month-year
+        const parts = fname.split(match ? match[0] : "");
+        if (parts.length > 1) {
+          let desc = parts[1].replace(/[_-]+/g, " ").trim();
+          if (desc) scenarioLabel += ` (${desc})`;
+        }
+
+        // Update scenario state + input field
+        s.name = scenarioLabel;
+        row.querySelector(".scenario-name").value = scenarioLabel;
+      }
+    });
+
+    return row;
+  }
+
+  function addScenario() {
+    if (scenarios.length >= maxScenarios) {
+      alert(`You can upload at most ${maxScenarios} scenarios for now.`);
+      return;
+    }
+    const id = Date.now() + "_" + Math.random().toString(16).slice(2);
+    const defaultColors = ["#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd","#8c564b"];
+    const scenario = {
+      id,
+      name: "",
+      color: defaultColors[scenarios.length] || "#000000",
+      file: null,
+      data: null
+    };
+    scenarios.push(scenario);
+    const row = createScenarioRow(id, scenario);
+    scenarioListEl.appendChild(row);
+  }
+
+  // Initialize with 2 rows by default
+  addScenario();
+  addScenario();
+
+  addScenarioBtn.addEventListener("click", addScenario);
+
+  // Parse one scenario CSV into scenario.data
+  function parseScenario(scenario) {
+    return new Promise((resolve, reject) => {
+      if (!scenario.file) {
+        return reject(new Error("Missing file for scenario " + (scenario.name || "")));
+      }
+      Papa.parse(scenario.file, {
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: results => {
+          const rows = results.data.filter(r => r.period != null && r.period !== "");
+          scenario.data = rows;
+          resolve(scenario);
+        },
+        error: err => reject(err)
+      });
+    });
+  }
+
+  function validateScenarios() {
+    const valid = scenarios.filter(s => s.file);
+    if (valid.length === 0) {
+      alert("Please upload at least one CSV file.");
+      return null;
+    }
+    // Fill default names
+    valid.forEach((s, idx) => {
+      if (!s.name || !s.name.trim()) {
+        s.name = "Scenario " + (idx + 1);
+      }
+    });
+    return valid;
+  }
+
+  // Main build dashboard action
+  buildDashboardBtn.addEventListener("click", () => {
+    const validScenarios = validateScenarios();
+    if (!validScenarios) return;
+
+    Promise.all(validScenarios.map(parseScenario))
+      .then(() => {
+        // Hide config, show dashboard
+        configStepEl.style.display = "none";
+        dashboardStepEl.style.display = "block";
+        scenarioCountLbl.textContent = `${validScenarios.length} scenario${validScenarios.length > 1 ? "s" : ""} loaded`;
+        renderDashboard(validScenarios);
+      })
+      .catch(err => {
+        console.error(err);
+        alert("There was a problem reading one of the files. Check the format and try again.");
+      });
+  });
+
+  backToConfigBtn.addEventListener("click", () => {
+    dashboardStepEl.style.display = "none";
+    configStepEl.style.display = "block";
+  });
+
+  // Render plots and tables
+  function renderDashboard(scenarios) {
+    renderPolicyChart(scenarios);
+    renderPolicyStepChart(scenarios);
+    renderGdpChart(scenarios);
+    renderSummaryTables(scenarios);
+  }
+
+  function getSeries(scenario, colName) {
+    const rows = scenario.data || [];
+    const x = [];
+    const y = [];
+    for (const r of rows) {
+      const xv = r.period;
+      const yv = r[colName];
+      if (xv != null && xv !== "" && typeof yv === "number" && !isNaN(yv)) {
+        x.push(xv);
+        y.push(yv);
+      }
+    }
+    return { x, y };
+  }
+
+  function renderPolicyChart(scenarios) {
+    const traces = [...scenarios].reverse().map(s => {
+      const series = getSeries(s, "i");
+      return {
+        x: series.x,
+        y: series.y,
+        mode: "lines",
+        name: s.name,
+        line: { color: s.color },
+        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+      };
+    });
+    const layout = {
+      title: "Policy Rate (i)",
+      margin: { t: 40, r: 10, b: 40, l: 55 },
+      xaxis: { title: "Period" },
+      yaxis: { title: "Percent", tickformat: ".2f" },
+      legend: { orientation: "h", y: -0.2 }
+    };
+    Plotly.newPlot("chart-policy", traces, layout, { responsive: true });
+  }
+
+  function renderPolicyStepChart(scenarios) {
+    const traces = [...scenarios].reverse().map(s => {
+      const raw = getSeries(s, "i");
+      const steppedY = raw.y.map(v => {
+        if (typeof v === "number" && !isNaN(v)) {
+          return Math.round(v / 0.25) * 0.25;
+        }
+        return null;
+      });
+      return {
+        x: raw.x,
+        y: steppedY,
+        mode: "lines",
+        name: s.name,
+        line: { color: s.color, dash: "dot" },
+        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+      };
+    });
+    const layout = {
+      title: "Policy Rate (step, 0.25 increments)",
+      margin: { t: 40, r: 10, b: 40, l: 55 },
+      xaxis: { title: "Period" },
+      yaxis: { title: "Percent", tickformat: ".2f" },
+      legend: { orientation: "h", y: -0.2 }
+    };
+    Plotly.newPlot("chart-policy-step", traces, layout, { responsive: true });
+  }
+
+  function renderGdpChart(scenarios) {
+    // Using dy4_r as GDP yoy. Change here if you want a different column.
+    const gdpCol = "dy4_r";
+    const traces = [...scenarios].reverse().map(s => {
+      const series = getSeries(s, gdpCol);
+      return {
+        x: series.x,
+        y: series.y,
+        mode: "lines",
+        name: s.name,
+        line: { color: s.color },
+        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+      };
+    });
+    const layout = {
+      title: "Real GDP Growth (dy4_r, yoy)",
+      margin: { t: 40, r: 10, b: 40, l: 55 },
+      xaxis: { title: "Period" },
+      yaxis: { title: "Percent", tickformat: ".1f" },
+      legend: { orientation: "h", y: -0.2 }
+    };
+    Plotly.newPlot("chart-gdp", traces, layout, { responsive: true });
+  }
+
+  function renderSummaryTables(scenarios) {
+    // Simple example: one table with last available observation for each scenario
+    const rows = [];
+    for (const s of scenarios) {
+      const data = (s.data || []).filter(r => r.period != null && r.period !== "");
+      if (!data.length) continue;
+      const last = data[data.length - 1];
+      const policy = Number(last.i);
+      const policyStep = Math.round(policy / 0.25) * 0.25;
+      const gdp = Number(last.dy4_r);
+      rows.push({
+        scenario: s.name,
+        period: last.period,
+        policy,
+        policyStep,
+        gdp
+      });
+    }
+
+    if (!rows.length) {
+      summaryTablesEl.innerHTML = "<p style='font-size:13px;color:var(--muted);'>No summary rows available.</p>";
+      return;
+    }
+
+    let html = `
+      <table>
+        <caption>Latest projection snapshot by scenario</caption>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>Last period</th>
+            <th>Policy rate (i)</th>
+            <th>Policy rate (step)</th>
+            <th>Real GDP yoy (dy4_r)</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    for (const r of rows) {
+      html += `
+        <tr>
+          <td>${r.scenario}</td>
+          <td>${r.period}</td>
+          <td>${isNaN(r.policy) ? "" : r.policy.toFixed(2)}</td>
+          <td>${isNaN(r.policyStep) ? "" : r.policyStep.toFixed(2)}</td>
+          <td>${isNaN(r.gdp) ? "" : r.gdp.toFixed(2)}</td>
+        </tr>
+      `;
+    }
+    html += "</tbody></table>";
+
+    summaryTablesEl.innerHTML = html;
+  }
+</script>
+</body>
+</html>
