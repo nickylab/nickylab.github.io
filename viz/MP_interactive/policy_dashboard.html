@@ -140,12 +140,27 @@
     th, td {
       border: 1px solid var(--border);
       padding: 6px 8px;
-      text-align: right;
     }
-    th:first-child, td:first-child { text-align: left; }
     th {
       background: #f9fafb;
       font-weight: 600;
+      text-align: center;
+    }
+    td {
+      text-align: right;
+    }
+    td:first-child {
+      text-align: left;
+    }
+    .table-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .table-option input {
+      margin: 0;
     }
     caption {
       caption-side: top;
@@ -219,7 +234,7 @@
 
   <!-- Step 1.5: range configuration -->
   <section id="range-config" class="card">
-    <h2>2. Set plot and table ranges</h2>
+    <h2>Set plot and table ranges</h2>
     <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">
       Define the common time ranges used for all charts and tables. Leave fields blank to use defaults.
     </p>
@@ -290,6 +305,13 @@
     </div>
 
     <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap;">
+        <h3 style="margin:0;font-size:14px;">Summary table</h3>
+        <label class="table-option">
+          <input type="checkbox" id="color-code-headers">
+          <span>Color‑code scenarios</span>
+        </label>
+      </div>
       <div id="summary-tables"></div>
     </div>
   </section>
@@ -307,6 +329,8 @@
   const defaultTableMax = "2030Q4";
   const defaultActualMin = "2019Q4";
   let availablePeriods = [];
+  let currentScenarios = [];
+  let colorCodeTableHeaders = false;
 
   function getCurrentQuarterLabel() {
     const now = new Date();
@@ -326,6 +350,13 @@
   const scenarioCountLbl = document.getElementById("scenario-count-label");
   const summaryTablesEl  = document.getElementById("summary-tables");
   const rangeConfigEl    = document.getElementById("range-config");
+  const colorCodeHeadersCheckbox = document.getElementById("color-code-headers");
+  if (colorCodeHeadersCheckbox) {
+    colorCodeHeadersCheckbox.addEventListener("change", () => {
+      colorCodeTableHeaders = !!colorCodeHeadersCheckbox.checked;
+      reRenderIfReady();
+    });
+  }
 
   const plotMinInput   = document.getElementById("plot-min");
   const plotMaxInput   = document.getElementById("plot-max");
@@ -578,18 +609,28 @@
       populateRangeSelects();
     }
 
-    // Hide first-page cards, show dashboard
+    currentScenarios = validScenarios;
+
+    // Hide upload card, keep range card visible, show dashboard
     configStepEl.style.display = "none";
-    rangeConfigEl.style.display = "none";
     dashboardStepEl.style.display = "block";
     scenarioCountLbl.textContent = `${validScenarios.length} scenario${validScenarios.length > 1 ? "s" : ""} loaded`;
-    renderDashboard(validScenarios);
+    renderDashboard(currentScenarios);
   });
 
   backToConfigBtn.addEventListener("click", () => {
     dashboardStepEl.style.display = "none";
     configStepEl.style.display = "block";
-    rangeConfigEl.style.display = "block";
+  });
+  function reRenderIfReady() {
+    if (dashboardStepEl.style.display !== "none" && currentScenarios && currentScenarios.length) {
+      renderDashboard(currentScenarios);
+    }
+  }
+
+  [plotMinInput, plotMaxInput, actualMinInput, actualMaxInput, tableMinInput, tableMaxInput].forEach(el => {
+    if (!el) return;
+    el.addEventListener("change", reRenderIfReady);
   });
 
   // Helpers for period range
@@ -815,7 +856,7 @@
 
     let html = `
       <table>
-        <caption>Projection table by period (table range: ${tableMin}–${tableMax})</caption>
+        
         <thead>
           <tr>
             <th rowspan="2">Period</th>
@@ -834,7 +875,9 @@
     // Second header row: scenario names under each variable
     vars.forEach(() => {
       scenariosOrdered.forEach(name => {
-        html += `<th>${name}</th>`;
+        const sObj = scenarios.find(s => s.name === name);
+        const colorStyle = colorCodeTableHeaders && sObj ? ` style="color:${sObj.color};"` : "";
+        html += `<th${colorStyle}>${name}</th>`;
       });
     });
 
