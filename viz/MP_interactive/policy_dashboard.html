@@ -147,10 +147,7 @@
       text-align: center;
     }
     td {
-      text-align: right;
-    }
-    td:first-child {
-      text-align: left;
+      text-align: center;
     }
     .table-option {
       display: inline-flex;
@@ -234,7 +231,7 @@
 
   <!-- Step 1.5: range configuration -->
   <section id="range-config" class="card">
-    <h2>Set plot and table ranges</h2>
+    <h2>2. Set plot and table ranges</h2>
     <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">
       Define the common time ranges used for all charts and tables. Leave fields blank to use defaults.
     </p>
@@ -611,8 +608,9 @@
 
     currentScenarios = validScenarios;
 
-    // Hide upload card, keep range card visible, show dashboard
+    // Hide upload and range cards, show dashboard
     configStepEl.style.display = "none";
+    rangeConfigEl.style.display = "none";
     dashboardStepEl.style.display = "block";
     scenarioCountLbl.textContent = `${validScenarios.length} scenario${validScenarios.length > 1 ? "s" : ""} loaded`;
     renderDashboard(currentScenarios);
@@ -621,6 +619,7 @@
   backToConfigBtn.addEventListener("click", () => {
     dashboardStepEl.style.display = "none";
     configStepEl.style.display = "block";
+    rangeConfigEl.style.display = "block";
   });
   function reRenderIfReady() {
     if (dashboardStepEl.style.display !== "none" && currentScenarios && currentScenarios.length) {
@@ -846,6 +845,10 @@
     });
 
     const scenariosOrdered = scenarios.map(s => s.name);
+    const scenarioColorMap = {};
+    scenarios.forEach(s => {
+    scenarioColorMap[s.name] = s.color;
+    });
 
     // Variables to display as top-level columns
     const vars = [
@@ -874,11 +877,11 @@
 
     // Second header row: scenario names under each variable
     vars.forEach(() => {
-      scenariosOrdered.forEach(name => {
-        const sObj = scenarios.find(s => s.name === name);
-        const colorStyle = colorCodeTableHeaders && sObj ? ` style="color:${sObj.color};"` : "";
+    scenariosOrdered.forEach(name => {
+        const color = colorCodeTableHeaders ? scenarioColorMap[name] : null;
+        const colorStyle = color ? ` style="color:${color};"` : "";
         html += `<th${colorStyle}>${name}</th>`;
-      });
+    });
     });
 
     html += `
@@ -889,19 +892,21 @@
 
     // Body rows: one per period
     periods.forEach(p => {
-      html += `<tr><td>${p}</td>`;
-      vars.forEach(v => {
+    html += `<tr><td>${p}</td>`;
+    vars.forEach(v => {
         scenariosOrdered.forEach(name => {
-          const lu = lookups[name] || {};
-          const rec = lu[p];
-          let val = "";
-          if (rec && typeof rec[v.key] === "number" && !isNaN(rec[v.key])) {
+        const lu = lookups[name] || {};
+        const rec = lu[p];
+        let val = "";
+        if (rec && typeof rec[v.key] === "number" && !isNaN(rec[v.key])) {
             val = rec[v.key].toFixed(2);
-          }
-          html += `<td>${val}</td>`;
+        }
+        const color = colorCodeTableHeaders ? scenarioColorMap[name] : null;
+        const styleAttr = color ? ` style="color:${color};"` : "";
+        html += `<td${styleAttr}>${val}</td>`;
         });
-      });
-      html += `</tr>`;
+    });
+    html += `</tr>`;
     });
 
     html += "</tbody></table>";
