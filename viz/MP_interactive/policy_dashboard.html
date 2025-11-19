@@ -123,6 +123,7 @@
       display: grid;
       grid-template-columns: 1fr;
       gap: 16px;
+      align-items: stretch;
     }
     @media (min-width: 960px) {
       .charts-grid {
@@ -130,7 +131,7 @@
       }
     }
     .chart-box {
-      min-height: 280px;
+      min-height: 260px;
     }
     table {
       border-collapse: collapse;
@@ -158,6 +159,42 @@
     }
     .table-option input {
       margin: 0;
+    }
+    .chart-toggle,
+    .table-var-checkbox {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .chart-pill-label,
+    .table-var-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0;
+      position: relative;
+    }
+    .chart-toggle + span,
+    .table-var-checkbox + span {
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .chart-toggle:checked + span,
+    .table-var-checkbox:checked + span {
+      border-color: var(--accent);
+      background: rgba(37,99,235,0.07);
+      color: var(--accent);
+    }
+    .table-vars {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 6px;
     }
     caption {
       caption-side: top;
@@ -294,20 +331,88 @@
     </div>
 
     <div class="card">
+      <div id="scenario-legend" style="margin-bottom:8px;font-size:11px;color:var(--muted);"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <h3 style="margin:0;font-size:14px;">Charts</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--muted);">
+          <label class="chart-pill-label" style="display:inline-flex;align-items:center;gap:4px;">
+            <input type="checkbox" class="chart-toggle" data-chart-id="chart-output-gap" checked>
+            <span>Output Gap</span>
+          </label>
+          <label class="chart-pill-label" style="display:inline-flex;align-items:center;gap:4px;">
+            <input type="checkbox" class="chart-toggle" data-chart-id="chart-output-levels" checked>
+            <span>Output &amp; Potential</span>
+          </label>
+          <label class="chart-pill-label" style="display:inline-flex;align-items:center;gap:4px;">
+            <input type="checkbox" class="chart-toggle" data-chart-id="chart-headline-yoy" checked>
+            <span>Headline YoY</span>
+          </label>
+          <label class="chart-pill-label" style="display:inline-flex;align-items:center;gap:4px;">
+            <input type="checkbox" class="chart-toggle" data-chart-id="chart-core-yoy">
+            <span>Core YoY</span>
+          </label>
+          <label class="chart-pill-label" style="display:inline-flex;align-items:center;gap:4px;">
+            <input type="checkbox" class="chart-toggle" data-chart-id="chart-policy" checked>
+            <span>Policy Rate</span>
+          </label>
+          <label class="chart-pill-label" style="display:inline-flex;align-items:center;gap:4px;">
+            <input type="checkbox" class="chart-toggle" data-chart-id="chart-policy-step">
+            <span>Policy (0.25 step)</span>
+          </label>
+          <label class="chart-pill-label" style="display:inline-flex;align-items:center;gap:4px;">
+            <input type="checkbox" class="chart-toggle" data-chart-id="chart-potential-growth">
+            <span>Potential Growth</span>
+          </label>
+          <label class="chart-pill-label" style="display:inline-flex;align-items:center;gap:4px;">
+            <input type="checkbox" class="chart-toggle" data-chart-id="chart-core-qoq">
+            <span>Core QoQ</span>
+          </label>
+          <label class="chart-pill-label" style="display:inline-flex;align-items:center;gap:4px;">
+            <input type="checkbox" class="chart-toggle" data-chart-id="chart-headline-qoq">
+            <span>Headline QoQ</span>
+          </label>
+        </div>
+      </div>
       <div class="charts-grid">
+        <div class="chart-box" id="chart-output-gap"></div>
+        <div class="chart-box" id="chart-output-levels"></div>
+        <div class="chart-box" id="chart-headline-yoy"></div>
+        <div class="chart-box" id="chart-core-yoy"></div>
         <div class="chart-box" id="chart-policy"></div>
         <div class="chart-box" id="chart-policy-step"></div>
-        <div class="chart-box" id="chart-gdp"></div>
+        <div class="chart-box" id="chart-potential-growth"></div>
+        <div class="chart-box" id="chart-core-qoq"></div>
+        <div class="chart-box" id="chart-headline-qoq"></div>
       </div>
     </div>
 
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap;">
         <h3 style="margin:0;font-size:14px;">Summary table</h3>
-        <label class="table-option">
-          <input type="checkbox" id="color-code-headers">
-          <span>Color‑code scenarios</span>
-        </label>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <label class="table-option">
+            <input type="checkbox" id="color-code-headers">
+            <span>Color‑code scenarios</span>
+          </label>
+          <div class="table-vars">
+            <label class="table-var-toggle">
+              <input type="checkbox" class="table-var-checkbox" data-var-id="ygap" checked>
+              <span>Output Gap (%)</span>
+            </label>
+            <label class="table-var-toggle">
+              <input type="checkbox" class="table-var-checkbox" data-var-id="policy" checked>
+              <span>Policy Rate (%)</span>
+            </label>
+            <label class="table-var-toggle">
+              <input type="checkbox" class="table-var-checkbox" data-var-id="policyStep" checked>
+              <span>Policy Rate (step)</span>
+            </label>
+            <label class="table-var-toggle">
+              <input type="checkbox" class="table-var-checkbox" data-var-id="gdp">
+              <span>Real GDP yoy</span>
+            </label>
+          </div>
+        </div>
       </div>
       <div id="summary-tables"></div>
     </div>
@@ -327,7 +432,43 @@
   const defaultActualMin = "2019Q4";
   let availablePeriods = [];
   let currentScenarios = [];
-  let colorCodeTableHeaders = false;
+let colorCodeTableHeaders = false;
+
+// Shared Plotly config for all charts (hide mode bar, etc.)
+const plotConfig = {
+  responsive: true,
+  displaylogo: false,
+  displayModeBar: false
+};
+
+  const tableVarConfig = {
+    ygap: {
+      id: "ygap",
+      label: "Output Gap (%)",
+      accessor: r => Number(r.ygap)
+    },
+    policy: {
+      id: "policy",
+      label: "Policy Rate",
+      accessor: r => Number(r.i)
+    },
+    policyStep: {
+      id: "policyStep",
+      label: "Policy Rate (step)",
+      accessor: r => {
+        const v = Number(r.i);
+        if (typeof v === "number" && !isNaN(v)) {
+          return Math.round(v / 0.25) * 0.25;
+        }
+        return NaN;
+      }
+    },
+    gdp: {
+      id: "gdp",
+      label: "Real GDP yoy (dy4_r)",
+      accessor: r => Number(r.dy4_r)
+    }
+  };
 
   function getCurrentQuarterLabel() {
     const now = new Date();
@@ -347,6 +488,7 @@
   const scenarioCountLbl = document.getElementById("scenario-count-label");
   const summaryTablesEl  = document.getElementById("summary-tables");
   const rangeConfigEl    = document.getElementById("range-config");
+  const scenarioLegendEl = document.getElementById("scenario-legend");
   const rangeHeadingEl   = rangeConfigEl ? rangeConfigEl.querySelector("h2") : null;
   const rangeActionsEl   = rangeConfigEl ? rangeConfigEl.querySelector(".step-actions") : null;
   const colorCodeHeadersCheckbox = document.getElementById("color-code-headers");
@@ -653,6 +795,39 @@
     el.addEventListener("change", reRenderIfReady);
   });
 
+  // Chart visibility toggles
+  function applyChartVisibility() {
+    const toggles = document.querySelectorAll(".chart-toggle");
+    toggles.forEach(toggle => {
+      const targetId = toggle.getAttribute("data-chart-id");
+      const targetEl = document.getElementById(targetId);
+      if (!targetEl) return;
+      targetEl.style.display = toggle.checked ? "block" : "none";
+    });
+
+    // After visibility changes, force Plotly to recompute sizes
+    const visibleCharts = document.querySelectorAll(".chart-box");
+    visibleCharts.forEach(box => {
+      if (box.style.display !== "none" && typeof Plotly !== "undefined" && Plotly.Plots && typeof Plotly.Plots.resize === "function") {
+        Plotly.Plots.resize(box);
+      }
+    });
+  }
+
+  // Initialize visibility and listen for changes
+  document.addEventListener("DOMContentLoaded", () => {
+    applyChartVisibility();
+    const toggles = document.querySelectorAll(".chart-toggle");
+    toggles.forEach(toggle => {
+      toggle.addEventListener("change", applyChartVisibility);
+    });
+
+    const tableVarCheckboxes = document.querySelectorAll(".table-var-checkbox");
+    tableVarCheckboxes.forEach(cb => {
+      cb.addEventListener("change", reRenderIfReady);
+    });
+  });
+
   // Helpers for period range
   function parsePeriodToIndex(p) {
     if (p == null) return null;
@@ -696,12 +871,46 @@
   }
 
   // Render plots and tables
+  function renderScenarioLegend(scenarios) {
+    if (!scenarioLegendEl) return;
+    if (!scenarios || !scenarios.length) {
+      scenarioLegendEl.innerHTML = "";
+      return;
+    }
+    const items = scenarios.map(s => {
+      const color = s.color || "#000000";
+      const name = s.name || "Scenario";
+      return `
+        <span style="display:inline-flex;align-items:center;margin-right:8px;margin-bottom:4px;">
+          <span style="width:10px;height:10px;border-radius:999px;background:${color};display:inline-block;margin-right:4px;"></span>
+          <span>${name}</span>
+        </span>
+      `;
+    });
+    scenarioLegendEl.innerHTML = items.join("");
+  }
+
   function renderDashboard(scenarios) {
     const ranges = getRangeConfig();
+    renderScenarioLegend(scenarios);
+    renderOutputGapChart(scenarios, ranges);
+    renderOutputLevelsChart(scenarios, ranges);
+    renderHeadlineYoyChart(scenarios, ranges);
+    renderCoreYoyChart(scenarios, ranges);
     renderPolicyChart(scenarios, ranges);
     renderPolicyStepChart(scenarios, ranges);
-    renderGdpChart(scenarios, ranges);
+    renderPotentialGrowthChart(scenarios, ranges);
+    renderCoreQoqChart(scenarios, ranges);
+    renderHeadlineQoqChart(scenarios, ranges);
     renderSummaryTables(scenarios, ranges);
+
+    // Ensure all charts fit their grid cells on initial render
+    const visibleCharts = document.querySelectorAll(".chart-box");
+    visibleCharts.forEach(box => {
+      if (box.style.display !== "none" && typeof Plotly !== "undefined" && Plotly.Plots && typeof Plotly.Plots.resize === "function") {
+        Plotly.Plots.resize(box);
+      }
+    });
   }
 
   function renderPolicyChart(scenarios, ranges) {
@@ -717,11 +926,12 @@
       };
     });
     const layout = {
-      title: "Policy Rate (i)",
+      title: "Policy Rate (%)",
+      height: 260,
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
-      legend: { orientation: "h", y: -0.2 },
+      showlegend: false,
       shapes: [
         {
           type: "rect",
@@ -736,7 +946,7 @@
         }
       ]
     };
-    Plotly.newPlot("chart-policy", traces, layout, { responsive: true });
+    Plotly.newPlot("chart-policy", traces, layout, plotConfig);
   }
 
   function renderPolicyStepChart(scenarios, ranges) {
@@ -758,11 +968,12 @@
       };
     });
     const layout = {
-      title: "Policy Rate (step, 0.25 increments)",
+      title: "Policy Rate (%, in 0.25 increments)",
+      height: 260,
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
-      legend: { orientation: "h", y: -0.2 },
+      showlegend: false,
       shapes: [
         {
           type: "rect",
@@ -777,14 +988,14 @@
         }
       ]
     };
-    Plotly.newPlot("chart-policy-step", traces, layout, { responsive: true });
+    Plotly.newPlot("chart-policy-step", traces, layout, plotConfig);
   }
 
-  function renderGdpChart(scenarios, ranges) {
-    // Using dy4_r as GDP yoy. Change here if you want a different column.
-    const gdpCol = "dy4_r";
+
+  // 1) Output Gap (%): ygap
+  function renderOutputGapChart(scenarios, ranges) {
     const traces = [...scenarios].reverse().map(s => {
-      const series = getSeries(s, gdpCol, ranges.plotMin, ranges.plotMax);
+      const series = getSeries(s, "ygap", ranges.plotMin, ranges.plotMax);
       return {
         x: series.x,
         y: series.y,
@@ -795,11 +1006,12 @@
       };
     });
     const layout = {
-      title: "Real GDP Growth (dy4_r, yoy)",
+      title: "Output Gap (%)",
+      height: 260,
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
-      yaxis: { title: "Percent", tickformat: ".1f" },
-      legend: { orientation: "h", y: -0.2 },
+      yaxis: { title: "Percent", tickformat: ".2f" },
+      showlegend: false,
       shapes: [
         {
           type: "rect",
@@ -814,14 +1026,271 @@
         }
       ]
     };
-    Plotly.newPlot("chart-gdp", traces, layout, { responsive: true });
+    Plotly.newPlot("chart-output-gap", traces, layout, plotConfig);
   }
 
+  // 2) Output & Potential Output: y & ytrnd
+  function renderOutputLevelsChart(scenarios, ranges) {
+    const traces = [];
+    [...scenarios].reverse().forEach(s => {
+      const seriesY = getSeries(s, "y", ranges.plotMin, ranges.plotMax);
+      const seriesYtrnd = getSeries(s, "ytrnd", ranges.plotMin, ranges.plotMax);
+      const yLn = seriesY.y.map(v =>
+        typeof v === "number" && v > 0 ? Math.log(v) * 100 : null
+      );
+      const yTrndLn = seriesYtrnd.y.map(v =>
+        typeof v === "number" && v > 0 ? Math.log(v) * 100 : null
+      );
+
+      traces.push({
+        x: seriesY.x,
+        y: yLn,
+        mode: "lines",
+        name: s.name + " — Output",
+        line: { color: s.color },
+        hovertemplate: "%{x}<br>" + s.name + " — Output: %{y:.2f}<extra></extra>"
+      });
+
+      traces.push({
+        x: seriesYtrnd.x,
+        y: yTrndLn,
+        mode: "lines",
+        name: s.name + " — Potential",
+        line: { color: s.color, dash: "dot" },
+        hovertemplate: "%{x}<br>" + s.name + " — Potential: %{y:.2f}<extra></extra>"
+      });
+    });
+
+    const layout = {
+      title: "Output & Potential Output",
+      height: 260,
+      margin: { t: 40, r: 10, b: 40, l: 55 },
+      xaxis: { title: "Period" },
+      yaxis: { title: "Level (ln × 100)" },
+      showlegend: false,
+      shapes: [
+        {
+          type: "rect",
+          xref: "x",
+          yref: "paper",
+          x0: ranges.actualMin,
+          x1: ranges.actualMax,
+          y0: 0,
+          y1: 1,
+          fillcolor: "rgba(15,23,42,0.08)",
+          line: { width: 0 }
+        }
+      ]
+    };
+    Plotly.newPlot("chart-output-levels", traces, layout, plotConfig);
+  }
+
+  // 3) Headline Inflation (%YoY): picpi4
+  function renderHeadlineYoyChart(scenarios, ranges) {
+    const traces = [...scenarios].reverse().map(s => {
+      const series = getSeries(s, "picpi4", ranges.plotMin, ranges.plotMax);
+      return {
+        x: series.x,
+        y: series.y,
+        mode: "lines",
+        name: s.name,
+        line: { color: s.color },
+        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+      };
+    });
+    const layout = {
+      title: "Headline Inflation (%YoY)",
+      height: 260,
+      margin: { t: 40, r: 10, b: 40, l: 55 },
+      xaxis: { title: "Period" },
+      yaxis: { title: "Percent", tickformat: ".2f" },
+      showlegend: false,
+      shapes: [
+        {
+          type: "rect",
+          xref: "x",
+          yref: "paper",
+          x0: ranges.actualMin,
+          x1: ranges.actualMax,
+          y0: 0,
+          y1: 1,
+          fillcolor: "rgba(15,23,42,0.08)",
+          line: { width: 0 }
+        }
+      ]
+    };
+    Plotly.newPlot("chart-headline-yoy", traces, layout, plotConfig);
+  }
+
+  // 4) Core Inflation (%YoY): pi4
+  function renderCoreYoyChart(scenarios, ranges) {
+    const traces = [...scenarios].reverse().map(s => {
+      const series = getSeries(s, "pi4", ranges.plotMin, ranges.plotMax);
+      return {
+        x: series.x,
+        y: series.y,
+        mode: "lines",
+        name: s.name,
+        line: { color: s.color },
+        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+      };
+    });
+    const layout = {
+      title: "Core Inflation (%YoY)",
+      height: 260,
+      margin: { t: 40, r: 10, b: 40, l: 55 },
+      xaxis: { title: "Period" },
+      yaxis: { title: "Percent", tickformat: ".2f" },
+      showlegend: false,
+      shapes: [
+        {
+          type: "rect",
+          xref: "x",
+          yref: "paper",
+          x0: ranges.actualMin,
+          x1: ranges.actualMax,
+          y0: 0,
+          y1: 1,
+          fillcolor: "rgba(15,23,42,0.08)",
+          line: { width: 0 }
+        }
+      ]
+    };
+    Plotly.newPlot("chart-core-yoy", traces, layout, plotConfig);
+  }
+
+  // 7) Ann. Potential Growth (%): dytrnd
+  function renderPotentialGrowthChart(scenarios, ranges) {
+    const traces = [...scenarios].reverse().map(s => {
+      const series = getSeries(s, "dytrnd", ranges.plotMin, ranges.plotMax);
+      return {
+        x: series.x,
+        y: series.y,
+        mode: "lines",
+        name: s.name,
+        line: { color: s.color },
+        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+      };
+    });
+    const layout = {
+      title: "Ann. Potential Growth (%)",
+      height: 260,
+      margin: { t: 40, r: 10, b: 40, l: 55 },
+      xaxis: { title: "Period" },
+      yaxis: { title: "Percent", tickformat: ".2f" },
+      showlegend: false,
+      shapes: [
+        {
+          type: "rect",
+          xref: "x",
+          yref: "paper",
+          x0: ranges.actualMin,
+          x1: ranges.actualMax,
+          y0: 0,
+          y1: 1,
+          fillcolor: "rgba(15,23,42,0.08)",
+          line: { width: 0 }
+        }
+      ]
+    };
+    Plotly.newPlot("chart-potential-growth", traces, layout, plotConfig);
+  }
+
+  // 8) Core Inflation (%QoQ Ann.): pi
+  function renderCoreQoqChart(scenarios, ranges) {
+    const traces = [...scenarios].reverse().map(s => {
+      const series = getSeries(s, "pi", ranges.plotMin, ranges.plotMax);
+      return {
+        x: series.x,
+        y: series.y,
+        mode: "lines",
+        name: s.name,
+        line: { color: s.color },
+        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+      };
+    });
+    const layout = {
+      title: "Core Inflation (%QoQ Ann.)",
+      height: 260,
+      margin: { t: 40, r: 10, b: 40, l: 55 },
+      xaxis: { title: "Period" },
+      yaxis: { title: "Percent", tickformat: ".2f" },
+      showlegend: false,
+      shapes: [
+        {
+          type: "rect",
+          xref: "x",
+          yref: "paper",
+          x0: ranges.actualMin,
+          x1: ranges.actualMax,
+          y0: 0,
+          y1: 1,
+          fillcolor: "rgba(15,23,42,0.08)",
+          line: { width: 0 }
+        }
+      ]
+    };
+    Plotly.newPlot("chart-core-qoq", traces, layout, plotConfig);
+  }
+
+  // 9) Headline Inflation (%QoQ Ann.): picpi
+  function renderHeadlineQoqChart(scenarios, ranges) {
+    const traces = [...scenarios].reverse().map(s => {
+      const series = getSeries(s, "picpi", ranges.plotMin, ranges.plotMax);
+      return {
+        x: series.x,
+        y: series.y,
+        mode: "lines",
+        name: s.name,
+        line: { color: s.color },
+        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+      };
+    });
+    const layout = {
+      title: "Headline Inflation (%QoQ Ann.)",
+      height: 260,
+      margin: { t: 40, r: 10, b: 40, l: 55 },
+      xaxis: { title: "Period" },
+      yaxis: { title: "Percent", tickformat: ".2f" },
+      showlegend: false,
+      shapes: [
+        {
+          type: "rect",
+          xref: "x",
+          yref: "paper",
+          x0: ranges.actualMin,
+          x1: ranges.actualMax,
+          y0: 0,
+          y1: 1,
+          fillcolor: "rgba(15,23,42,0.08)",
+          line: { width: 0 }
+        }
+      ]
+    };
+    Plotly.newPlot("chart-headline-qoq", traces, layout, plotConfig);
+  }
+
+
   function renderSummaryTables(scenarios, ranges) {
-    // Build a time-series table over the table range:
-    // rows = periods, columns = variables × scenarios
     const tableMin = ranges.tableMin;
     const tableMax = ranges.tableMax;
+
+    // Determine which variables are selected
+    const varCheckboxes = document.querySelectorAll(".table-var-checkbox");
+    const activeVarIds = Array.from(varCheckboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.getAttribute("data-var-id"))
+      .filter(id => !!tableVarConfig[id]);
+
+    if (!activeVarIds.length) {
+      summaryTablesEl.innerHTML = "<p style='font-size:13px;color:var(--muted);'>Select at least one variable to display.</p>";
+      return;
+    }
+
+    const vars = activeVarIds.map(id => ({
+      id,
+      label: tableVarConfig[id].label
+    }));
 
     // Collect all periods within the table range across all scenarios
     const periodSet = new Set();
@@ -842,7 +1311,7 @@
       return;
     }
 
-    // For each scenario, build a lookup: period -> {policy, policyStep, gdp}
+    // For each scenario, build a lookup: period -> raw row
     const lookups = {};
     scenarios.forEach(s => {
       const map = {};
@@ -851,16 +1320,7 @@
         if (p == null || p === "") return;
         if (!periodInRange(p, tableMin, tableMax)) return;
         const key = String(p).trim();
-        const policy = Number(r.i);
-        const policyStep = typeof policy === "number" && !isNaN(policy)
-          ? Math.round(policy / 0.25) * 0.25
-          : NaN;
-        const gdp = Number(r.dy4_r);
-        map[key] = {
-          policy,
-          policyStep,
-          gdp
-        };
+        map[key] = r;
       });
       lookups[s.name] = map;
     });
@@ -868,19 +1328,11 @@
     const scenariosOrdered = scenarios.map(s => s.name);
     const scenarioColorMap = {};
     scenarios.forEach(s => {
-    scenarioColorMap[s.name] = s.color;
+      scenarioColorMap[s.name] = s.color;
     });
-
-    // Variables to display as top-level columns
-    const vars = [
-      { key: "policy", label: "Policy rate (i)" },
-      { key: "policyStep", label: "Policy rate (step)" },
-      { key: "gdp", label: "Real GDP yoy (dy4_r)" }
-    ];
 
     let html = `
       <table>
-        
         <thead>
           <tr>
             <th rowspan="2">Period</th>
@@ -898,11 +1350,11 @@
 
     // Second header row: scenario names under each variable
     vars.forEach(() => {
-    scenariosOrdered.forEach(name => {
+      scenariosOrdered.forEach(name => {
         const color = colorCodeTableHeaders ? scenarioColorMap[name] : null;
         const colorStyle = color ? ` style="color:${color};"` : "";
         html += `<th${colorStyle}>${name}</th>`;
-    });
+      });
     });
 
     html += `
@@ -913,21 +1365,25 @@
 
     // Body rows: one per period
     periods.forEach(p => {
-    html += `<tr><td>${p}</td>`;
-    vars.forEach(v => {
+      html += `<tr><td>${p}</td>`;
+      vars.forEach(v => {
+        const cfg = tableVarConfig[v.id];
         scenariosOrdered.forEach(name => {
-        const lu = lookups[name] || {};
-        const rec = lu[p];
-        let val = "";
-        if (rec && typeof rec[v.key] === "number" && !isNaN(rec[v.key])) {
-            val = rec[v.key].toFixed(2);
-        }
-        const color = colorCodeTableHeaders ? scenarioColorMap[name] : null;
-        const styleAttr = color ? ` style="color:${color};"` : "";
-        html += `<td${styleAttr}>${val}</td>`;
+          const lu = lookups[name] || {};
+          const rec = lu[p];
+          let val = "";
+          if (rec && cfg && typeof cfg.accessor === "function") {
+            const raw = cfg.accessor(rec);
+            if (typeof raw === "number" && !isNaN(raw)) {
+              val = raw.toFixed(2);
+            }
+          }
+          const color = colorCodeTableHeaders ? scenarioColorMap[name] : null;
+          const styleAttr = color ? ` style="color:${color};"` : "";
+          html += `<td${styleAttr}>${val}</td>`;
         });
-    });
-    html += `</tr>`;
+      });
+      html += `</tr>`;
     });
 
     html += "</tbody></table>";
