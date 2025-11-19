@@ -347,6 +347,8 @@
   const scenarioCountLbl = document.getElementById("scenario-count-label");
   const summaryTablesEl  = document.getElementById("summary-tables");
   const rangeConfigEl    = document.getElementById("range-config");
+  const rangeHeadingEl   = rangeConfigEl ? rangeConfigEl.querySelector("h2") : null;
+  const rangeActionsEl   = rangeConfigEl ? rangeConfigEl.querySelector(".step-actions") : null;
   const colorCodeHeadersCheckbox = document.getElementById("color-code-headers");
   if (colorCodeHeadersCheckbox) {
     colorCodeHeadersCheckbox.addEventListener("change", () => {
@@ -608,10 +610,20 @@
 
     currentScenarios = validScenarios;
 
-    // Hide upload and range cards, show dashboard
+    // Hide upload card, keep range card visible (as part of dashboard), show dashboard
     configStepEl.style.display = "none";
-    rangeConfigEl.style.display = "none";
     dashboardStepEl.style.display = "block";
+    if (rangeConfigEl) {
+      rangeConfigEl.style.display = "block";
+    }
+    // On the dashboard page: no "2." and no Build button
+    if (rangeHeadingEl) {
+      rangeHeadingEl.textContent = "Set plot and table ranges";
+    }
+    if (rangeActionsEl) {
+      rangeActionsEl.style.display = "none";
+    }
+
     scenarioCountLbl.textContent = `${validScenarios.length} scenario${validScenarios.length > 1 ? "s" : ""} loaded`;
     renderDashboard(currentScenarios);
   });
@@ -619,7 +631,16 @@
   backToConfigBtn.addEventListener("click", () => {
     dashboardStepEl.style.display = "none";
     configStepEl.style.display = "block";
-    rangeConfigEl.style.display = "block";
+    if (rangeConfigEl) {
+      rangeConfigEl.style.display = "block";
+    }
+    // Back on the first page: show "2." and the Build button again
+    if (rangeHeadingEl) {
+      rangeHeadingEl.textContent = "2. Set plot and table ranges";
+    }
+    if (rangeActionsEl) {
+      rangeActionsEl.style.display = "flex";
+    }
   });
   function reRenderIfReady() {
     if (dashboardStepEl.style.display !== "none" && currentScenarios && currentScenarios.length) {
