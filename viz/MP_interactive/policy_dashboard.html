@@ -164,6 +164,36 @@
       font-size: 11px;
       font-weight: 500;
     }
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .range-input {
+      flex: 1;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .range-sep {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .range-hint {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .site-footer {
+      max-width: 1100px;
+      margin: 0 auto 24px;
+      padding: 8px 16px 0;
+      font-size: 11px;
+      color: var(--muted);
+      text-align: right;
+    }
   </style>
 </head>
 <body>
@@ -171,7 +201,7 @@
 <header>
   <h1>MPC Policy Rate Projection Dashboard</h1>
   <p class="lede">
-    Upload MPC projection CSVs, give them names and colors, then compare policy rate paths and GDP growth across scenarios.
+    Upload MPC projection CSVs (chartpackcsv), then compare output gaps and policy rate projections across scenarios.
   </p>
 </header>
 
@@ -179,14 +209,63 @@
   <!-- Step 1: config and upload -->
   <section id="config-step" class="card">
     <h2>1. Upload projection files</h2>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">
-      Each file should have at least <code>period</code>, <code>i</code> (policy rate), and <code>dy4_r</code> (real GDP yoy) columns, similar to your chartpack CSVs.
-    </p>
     <div id="scenario-list"></div>
     <button id="add-scenario" class="btn btn-ghost">+ Add scenario</button>
 
     <div class="step-actions">
-      <button id="build-dashboard" class="btn btn-primary">Next: Build dashboard</button>
+      <!-- Button moved to range-config; this area stays empty to keep spacing if needed -->
+    </div>
+  </section>
+
+  <!-- Step 1.5: range configuration -->
+  <section id="range-config" class="card">
+    <h2>2. Set plot and table ranges</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">
+      Define the common time ranges used for all charts and tables. Leave fields blank to use defaults.
+    </p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:flex-start;max-width:100%;">
+      <!-- Plot range -->
+      <div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">
+          Plot range (all charts)
+        </label>
+        <div class="range-row">
+          <select id="plot-min" class="range-input"></select>
+          <span class="range-sep">to</span>
+          <select id="plot-max" class="range-input"></select>
+        </div>
+        <div class="range-hint">Default: 2019Q4–2030Q4</div>
+      </div>
+
+      <!-- Actual data range -->
+      <div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">
+          Actual data range (shaded)
+        </label>
+        <div class="range-row">
+          <select id="actual-min" class="range-input"></select>
+          <span class="range-sep">to</span>
+          <select id="actual-max" class="range-input"></select>
+        </div>
+        <div class="range-hint">Default: 2019Q4–current quarter</div>
+      </div>
+
+      <!-- Table range -->
+      <div>
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px;">
+          Table range
+        </label>
+        <div class="range-row">
+          <select id="table-min" class="range-input"></select>
+          <span class="range-sep">to</span>
+          <select id="table-max" class="range-input"></select>
+        </div>
+        <div class="range-hint">Default: 2019Q4–2030Q4</div>
+      </div>
+    </div>
+    <div class="step-actions">
+      <button id="build-dashboard" class="btn btn-primary">Build dashboard</button>
     </div>
   </section>
 
@@ -194,15 +273,12 @@
   <section id="dashboard-step">
     <div class="card" style="margin-bottom:20px;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-        <h2 style="margin:0;">2. Interactive dashboard</h2>
+        <h2 style="margin:0;">Interactive dashboard</h2>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="pill" id="scenario-count-label"></span>
           <button id="back-to-config" class="btn btn-ghost">Back to file selection</button>
         </div>
       </div>
-      <p style="font-size:13px;color:var(--muted);margin:6px 0 0;">
-        Hover on the charts to inspect paths. Use the legend to toggle scenarios.
-      </p>
     </div>
 
     <div class="card">
@@ -224,6 +300,23 @@
   const maxScenarios = 6;
   const scenarios = []; // {id, name, color, file, data}
 
+  // Default ranges
+  const defaultPlotMin = "2019Q4";
+  const defaultPlotMax = "2030Q4";
+  const defaultTableMin = "2019Q4";
+  const defaultTableMax = "2030Q4";
+  const defaultActualMin = "2019Q4";
+  let availablePeriods = [];
+
+  function getCurrentQuarterLabel() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-based
+    const q = Math.floor(month / 3) + 1;
+    return year + "Q" + q;
+  }
+  const defaultActualMax = getCurrentQuarterLabel();
+
   const scenarioListEl   = document.getElementById("scenario-list");
   const addScenarioBtn   = document.getElementById("add-scenario");
   const buildDashboardBtn = document.getElementById("build-dashboard");
@@ -232,6 +325,91 @@
   const backToConfigBtn  = document.getElementById("back-to-config");
   const scenarioCountLbl = document.getElementById("scenario-count-label");
   const summaryTablesEl  = document.getElementById("summary-tables");
+  const rangeConfigEl    = document.getElementById("range-config");
+
+  const plotMinInput   = document.getElementById("plot-min");
+  const plotMaxInput   = document.getElementById("plot-max");
+  const actualMinInput = document.getElementById("actual-min");
+  const actualMaxInput = document.getElementById("actual-max");
+  const tableMinInput  = document.getElementById("table-min");
+  const tableMaxInput  = document.getElementById("table-max");
+
+
+  function getRangeConfig() {
+    return {
+      plotMin: (plotMinInput && plotMinInput.value) || defaultPlotMin,
+      plotMax: (plotMaxInput && plotMaxInput.value) || defaultPlotMax,
+      actualMin: (actualMinInput && actualMinInput.value) || defaultActualMin,
+      actualMax: (actualMaxInput && actualMaxInput.value) || defaultActualMax,
+      tableMin: (tableMinInput && tableMinInput.value) || defaultTableMin,
+      tableMax: (tableMaxInput && tableMaxInput.value) || defaultTableMax
+    };
+  }
+
+  function getAllPeriodsFromScenarios(scens) {
+    const set = new Set();
+    scens.forEach(s => {
+      (s.data || []).forEach(r => {
+        if (r.period != null && r.period !== "") {
+          const p = String(r.period).trim();
+          if (parsePeriodToIndex(p) != null) {
+            set.add(p);
+          }
+        }
+      });
+    });
+    const arr = Array.from(set);
+    arr.sort((a, b) => parsePeriodToIndex(a) - parsePeriodToIndex(b));
+    return arr;
+  }
+
+  function populateSelectFromPeriods(selectEl, defaultVal, isMax) {
+    if (!selectEl || !availablePeriods.length) return;
+    selectEl.innerHTML = "";
+    availablePeriods.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p;
+      opt.textContent = p;
+      selectEl.appendChild(opt);
+    });
+
+    const first = availablePeriods[0];
+    const last = availablePeriods[availablePeriods.length - 1];
+    const firstIdx = parsePeriodToIndex(first);
+    const lastIdx = parsePeriodToIndex(last);
+
+    let chosen = defaultVal;
+    const chosenIdx = chosen && parsePeriodToIndex(chosen);
+
+    if (!chosenIdx) {
+      chosen = isMax ? last : first;
+    } else {
+      if (chosenIdx < firstIdx) chosen = first;
+      if (chosenIdx > lastIdx) chosen = last;
+    }
+
+    selectEl.value = chosen;
+  }
+
+  function populateRangeSelects() {
+    if (!availablePeriods.length) return;
+    populateSelectFromPeriods(plotMinInput, defaultPlotMin, false);
+    populateSelectFromPeriods(plotMaxInput, defaultPlotMax, true);
+    populateSelectFromPeriods(actualMinInput, defaultActualMin, false);
+    populateSelectFromPeriods(actualMaxInput, defaultActualMax, true);
+    populateSelectFromPeriods(tableMinInput, defaultTableMin, false);
+    populateSelectFromPeriods(tableMaxInput, defaultTableMax, true);
+  }
+
+  function refreshAvailablePeriodsAndSelects() {
+    const scensWithData = scenarios.filter(s => Array.isArray(s.data) && s.data.length > 0);
+    if (!scensWithData.length) {
+      availablePeriods = [];
+      return;
+    }
+    availablePeriods = getAllPeriodsFromScenarios(scensWithData);
+    populateRangeSelects();
+  }
 
   // Helpers
   function createScenarioRow(id, scenario) {
@@ -260,6 +438,7 @@
       const idx = scenarios.findIndex(s => s.id === id);
       if (idx >= 0) scenarios.splice(idx, 1);
       row.remove();
+      refreshAvailablePeriodsAndSelects();
     });
 
     // Wire inputs to state
@@ -303,6 +482,22 @@
         // Update scenario state + input field
         s.name = scenarioLabel;
         row.querySelector(".scenario-name").value = scenarioLabel;
+
+        // Parse this file immediately to populate data and refresh ranges
+        Papa.parse(file, {
+          header: true,
+          dynamicTyping: true,
+          skipEmptyLines: true,
+          complete: results => {
+            const rows = results.data.filter(r => r.period != null && r.period !== "");
+            s.data = rows;
+            refreshAvailablePeriodsAndSelects();
+          },
+          error: err => {
+            console.error(err);
+            alert("There was a problem reading " + file.name + ". Please check the format.");
+          }
+        });
       }
     });
 
@@ -371,44 +566,67 @@
 
   // Main build dashboard action
   buildDashboardBtn.addEventListener("click", () => {
-    const validScenarios = validateScenarios();
-    if (!validScenarios) return;
+    const validScenarios = scenarios.filter(s => Array.isArray(s.data) && s.data.length > 0);
+    if (!validScenarios.length) {
+      alert("Please upload at least one valid CSV file before building the dashboard.");
+      return;
+    }
 
-    Promise.all(validScenarios.map(parseScenario))
-      .then(() => {
-        // Hide config, show dashboard
-        configStepEl.style.display = "none";
-        dashboardStepEl.style.display = "block";
-        scenarioCountLbl.textContent = `${validScenarios.length} scenario${validScenarios.length > 1 ? "s" : ""} loaded`;
-        renderDashboard(validScenarios);
-      })
-      .catch(err => {
-        console.error(err);
-        alert("There was a problem reading one of the files. Check the format and try again.");
-      });
+    // Ensure ranges are populated if not done yet
+    if (!availablePeriods.length) {
+      availablePeriods = getAllPeriodsFromScenarios(validScenarios);
+      populateRangeSelects();
+    }
+
+    // Hide first-page cards, show dashboard
+    configStepEl.style.display = "none";
+    rangeConfigEl.style.display = "none";
+    dashboardStepEl.style.display = "block";
+    scenarioCountLbl.textContent = `${validScenarios.length} scenario${validScenarios.length > 1 ? "s" : ""} loaded`;
+    renderDashboard(validScenarios);
   });
 
   backToConfigBtn.addEventListener("click", () => {
     dashboardStepEl.style.display = "none";
     configStepEl.style.display = "block";
+    rangeConfigEl.style.display = "block";
   });
 
-  // Render plots and tables
-  function renderDashboard(scenarios) {
-    renderPolicyChart(scenarios);
-    renderPolicyStepChart(scenarios);
-    renderGdpChart(scenarios);
-    renderSummaryTables(scenarios);
+  // Helpers for period range
+  function parsePeriodToIndex(p) {
+    if (p == null) return null;
+    const m = /^(\d{4})Q([1-4])$/.exec(String(p).trim());
+    if (!m) return null;
+    const year = parseInt(m[1], 10);
+    const q = parseInt(m[2], 10);
+    if (!year || !q) return null;
+    return year * 4 + q;
   }
 
-  function getSeries(scenario, colName) {
+  function periodInRange(p, minP, maxP) {
+    const idx = parsePeriodToIndex(p);
+    if (idx == null) return true; // if we cannot parse, do not filter out
+    const minIdx = minP ? parsePeriodToIndex(minP) : null;
+    const maxIdx = maxP ? parsePeriodToIndex(maxP) : null;
+    if (minIdx != null && idx < minIdx) return false;
+    if (maxIdx != null && idx > maxIdx) return false;
+    return true;
+  }
+
+  function getSeries(scenario, colName, minPeriod, maxPeriod) {
     const rows = scenario.data || [];
     const x = [];
     const y = [];
     for (const r of rows) {
       const xv = r.period;
       const yv = r[colName];
-      if (xv != null && xv !== "" && typeof yv === "number" && !isNaN(yv)) {
+      if (
+        xv != null &&
+        xv !== "" &&
+        typeof yv === "number" &&
+        !isNaN(yv) &&
+        periodInRange(xv, minPeriod, maxPeriod)
+      ) {
         x.push(xv);
         y.push(yv);
       }
@@ -416,9 +634,18 @@
     return { x, y };
   }
 
-  function renderPolicyChart(scenarios) {
+  // Render plots and tables
+  function renderDashboard(scenarios) {
+    const ranges = getRangeConfig();
+    renderPolicyChart(scenarios, ranges);
+    renderPolicyStepChart(scenarios, ranges);
+    renderGdpChart(scenarios, ranges);
+    renderSummaryTables(scenarios, ranges);
+  }
+
+  function renderPolicyChart(scenarios, ranges) {
     const traces = [...scenarios].reverse().map(s => {
-      const series = getSeries(s, "i");
+      const series = getSeries(s, "i", ranges.plotMin, ranges.plotMax);
       return {
         x: series.x,
         y: series.y,
@@ -433,14 +660,27 @@
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
-      legend: { orientation: "h", y: -0.2 }
+      legend: { orientation: "h", y: -0.2 },
+      shapes: [
+        {
+          type: "rect",
+          xref: "x",
+          yref: "paper",
+          x0: ranges.actualMin,
+          x1: ranges.actualMax,
+          y0: 0,
+          y1: 1,
+          fillcolor: "rgba(15,23,42,0.08)",
+          line: { width: 0 }
+        }
+      ]
     };
     Plotly.newPlot("chart-policy", traces, layout, { responsive: true });
   }
 
-  function renderPolicyStepChart(scenarios) {
+  function renderPolicyStepChart(scenarios, ranges) {
     const traces = [...scenarios].reverse().map(s => {
-      const raw = getSeries(s, "i");
+      const raw = getSeries(s, "i", ranges.plotMin, ranges.plotMax);
       const steppedY = raw.y.map(v => {
         if (typeof v === "number" && !isNaN(v)) {
           return Math.round(v / 0.25) * 0.25;
@@ -461,16 +701,29 @@
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
-      legend: { orientation: "h", y: -0.2 }
+      legend: { orientation: "h", y: -0.2 },
+      shapes: [
+        {
+          type: "rect",
+          xref: "x",
+          yref: "paper",
+          x0: ranges.actualMin,
+          x1: ranges.actualMax,
+          y0: 0,
+          y1: 1,
+          fillcolor: "rgba(15,23,42,0.08)",
+          line: { width: 0 }
+        }
+      ]
     };
     Plotly.newPlot("chart-policy-step", traces, layout, { responsive: true });
   }
 
-  function renderGdpChart(scenarios) {
+  function renderGdpChart(scenarios, ranges) {
     // Using dy4_r as GDP yoy. Change here if you want a different column.
     const gdpCol = "dy4_r";
     const traces = [...scenarios].reverse().map(s => {
-      const series = getSeries(s, gdpCol);
+      const series = getSeries(s, gdpCol, ranges.plotMin, ranges.plotMax);
       return {
         x: series.x,
         y: series.y,
@@ -485,64 +738,136 @@
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".1f" },
-      legend: { orientation: "h", y: -0.2 }
+      legend: { orientation: "h", y: -0.2 },
+      shapes: [
+        {
+          type: "rect",
+          xref: "x",
+          yref: "paper",
+          x0: ranges.actualMin,
+          x1: ranges.actualMax,
+          y0: 0,
+          y1: 1,
+          fillcolor: "rgba(15,23,42,0.08)",
+          line: { width: 0 }
+        }
+      ]
     };
     Plotly.newPlot("chart-gdp", traces, layout, { responsive: true });
   }
 
-  function renderSummaryTables(scenarios) {
-    // Simple example: one table with last available observation for each scenario
-    const rows = [];
-    for (const s of scenarios) {
-      const data = (s.data || []).filter(r => r.period != null && r.period !== "");
-      if (!data.length) continue;
-      const last = data[data.length - 1];
-      const policy = Number(last.i);
-      const policyStep = Math.round(policy / 0.25) * 0.25;
-      const gdp = Number(last.dy4_r);
-      rows.push({
-        scenario: s.name,
-        period: last.period,
-        policy,
-        policyStep,
-        gdp
-      });
-    }
+  function renderSummaryTables(scenarios, ranges) {
+    // Build a time-series table over the table range:
+    // rows = periods, columns = variables × scenarios
+    const tableMin = ranges.tableMin;
+    const tableMax = ranges.tableMax;
 
-    if (!rows.length) {
-      summaryTablesEl.innerHTML = "<p style='font-size:13px;color:var(--muted);'>No summary rows available.</p>";
+    // Collect all periods within the table range across all scenarios
+    const periodSet = new Set();
+    scenarios.forEach(s => {
+      (s.data || []).forEach(r => {
+        const p = r.period;
+        if (p != null && p !== "" && periodInRange(p, tableMin, tableMax)) {
+          periodSet.add(String(p).trim());
+        }
+      });
+    });
+
+    const periods = Array.from(periodSet);
+    periods.sort((a, b) => parsePeriodToIndex(a) - parsePeriodToIndex(b));
+
+    if (!periods.length) {
+      summaryTablesEl.innerHTML = "<p style='font-size:13px;color:var(--muted);'>No observations in the selected table range.</p>";
       return;
     }
 
+    // For each scenario, build a lookup: period -> {policy, policyStep, gdp}
+    const lookups = {};
+    scenarios.forEach(s => {
+      const map = {};
+      (s.data || []).forEach(r => {
+        const p = r.period;
+        if (p == null || p === "") return;
+        if (!periodInRange(p, tableMin, tableMax)) return;
+        const key = String(p).trim();
+        const policy = Number(r.i);
+        const policyStep = typeof policy === "number" && !isNaN(policy)
+          ? Math.round(policy / 0.25) * 0.25
+          : NaN;
+        const gdp = Number(r.dy4_r);
+        map[key] = {
+          policy,
+          policyStep,
+          gdp
+        };
+      });
+      lookups[s.name] = map;
+    });
+
+    const scenariosOrdered = scenarios.map(s => s.name);
+
+    // Variables to display as top-level columns
+    const vars = [
+      { key: "policy", label: "Policy rate (i)" },
+      { key: "policyStep", label: "Policy rate (step)" },
+      { key: "gdp", label: "Real GDP yoy (dy4_r)" }
+    ];
+
     let html = `
       <table>
-        <caption>Latest projection snapshot by scenario</caption>
+        <caption>Projection table by period (table range: ${tableMin}–${tableMax})</caption>
         <thead>
           <tr>
-            <th>Scenario</th>
-            <th>Last period</th>
-            <th>Policy rate (i)</th>
-            <th>Policy rate (step)</th>
-            <th>Real GDP yoy (dy4_r)</th>
+            <th rowspan="2">Period</th>
+    `;
+
+    // First header row: variable names spanning all scenarios
+    vars.forEach(v => {
+      html += `<th colspan="${scenariosOrdered.length}">${v.label}</th>`;
+    });
+
+    html += `
+          </tr>
+          <tr>
+    `;
+
+    // Second header row: scenario names under each variable
+    vars.forEach(() => {
+      scenariosOrdered.forEach(name => {
+        html += `<th>${name}</th>`;
+      });
+    });
+
+    html += `
           </tr>
         </thead>
         <tbody>
     `;
-    for (const r of rows) {
-      html += `
-        <tr>
-          <td>${r.scenario}</td>
-          <td>${r.period}</td>
-          <td>${isNaN(r.policy) ? "" : r.policy.toFixed(2)}</td>
-          <td>${isNaN(r.policyStep) ? "" : r.policyStep.toFixed(2)}</td>
-          <td>${isNaN(r.gdp) ? "" : r.gdp.toFixed(2)}</td>
-        </tr>
-      `;
-    }
+
+    // Body rows: one per period
+    periods.forEach(p => {
+      html += `<tr><td>${p}</td>`;
+      vars.forEach(v => {
+        scenariosOrdered.forEach(name => {
+          const lu = lookups[name] || {};
+          const rec = lu[p];
+          let val = "";
+          if (rec && typeof rec[v.key] === "number" && !isNaN(rec[v.key])) {
+            val = rec[v.key].toFixed(2);
+          }
+          html += `<td>${val}</td>`;
+        });
+      });
+      html += `</tr>`;
+    });
+
     html += "</tbody></table>";
 
     summaryTablesEl.innerHTML = html;
   }
 </script>
+<footer class="site-footer">
+  © 2025 Nick
+</footer>
 </body>
 </html>
