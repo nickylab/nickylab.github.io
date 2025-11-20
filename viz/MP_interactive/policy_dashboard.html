@@ -294,7 +294,7 @@
           Actual data range (shaded)
         </label>
         <div class="range-row">
-          <select id="actual-min" class="range-input"></select>
+          <select id="actual-min" class="range-input" disabled></select>
           <span class="range-sep">to</span>
           <select id="actual-max" class="range-input"></select>
         </div>
@@ -531,7 +531,7 @@
     return {
       plotMin: (plotMinInput && plotMinInput.value) || defaultPlotMin,
       plotMax: (plotMaxInput && plotMaxInput.value) || defaultPlotMax,
-      actualMin: (actualMinInput && actualMinInput.value) || defaultActualMin,
+      actualMin: (plotMinInput && plotMinInput.value) || defaultPlotMin,
       actualMax: (actualMaxInput && actualMaxInput.value) || defaultActualMax,
       tableMin: (tableMinInput && tableMinInput.value) || defaultTableMin,
       tableMax: (tableMaxInput && tableMaxInput.value) || defaultTableMax
@@ -591,6 +591,12 @@
     populateSelectFromPeriods(actualMaxInput, defaultActualMax, true);
     populateSelectFromPeriods(tableMinInput, defaultTableMin, false);
     populateSelectFromPeriods(tableMaxInput, defaultTableMax, true);
+
+    // Keep actual-min aligned with plot-min and non-editable
+    if (plotMinInput && actualMinInput) {
+      actualMinInput.value = plotMinInput.value;
+      actualMinInput.disabled = true;
+    }
   }
 
   function refreshAvailablePeriodsAndSelects() {
@@ -812,8 +818,38 @@
 
   [plotMinInput, plotMaxInput, actualMinInput, actualMaxInput, tableMinInput, tableMaxInput].forEach(el => {
     if (!el) return;
-    el.addEventListener("change", reRenderIfReady);
+    el.addEventListener("change", () => {
+      // Keep actual-min locked to plot-min
+      if (el === plotMinInput && actualMinInput) {
+        actualMinInput.value = plotMinInput.value;
+      }
+      reRenderIfReady();
+    });
   });
+  // Helper to compute actual data shading (shaded region) for charts
+  function buildActualDataShading(ranges) {
+    const shadeMin = ranges.plotMin;
+    const shadeMax = ranges.actualMax;
+    const minIdx = parsePeriodToIndex(shadeMin);
+    const maxIdx = parsePeriodToIndex(shadeMax);
+    // If plot-min is beyond actual-max (or either is invalid), do not draw shading
+    if (minIdx == null || maxIdx == null || minIdx > maxIdx) {
+      return [];
+    }
+    return [
+      {
+        type: "rect",
+        xref: "x",
+        yref: "paper",
+        x0: shadeMin,
+        x1: shadeMax,
+        y0: 0,
+        y1: 1,
+        fillcolor: "rgba(15,23,42,0.08)",
+        line: { width: 0 }
+      }
+    ];
+  }
 
   // Chart visibility toggles
   function applyChartVisibility() {
@@ -867,6 +903,81 @@
     if (minIdx != null && idx < minIdx) return false;
     if (maxIdx != null && idx > maxIdx) return false;
     return true;
+  }
+
+  function parsePeriodParts(p) {
+    const m = /^(\d{4})Q([1-4])$/.exec(String(p).trim());
+    if (!m) return null;
+    return { year: parseInt(m[1], 10), q: parseInt(m[2], 10) };
+  }
+
+  function buildXAxisLayout(ranges) {
+    if (!availablePeriods.length) return {};
+    const inPlot = availablePeriods.filter(p =>
+      periodInRange(p, ranges.plotMin, ranges.plotMax)
+    );
+    if (!inPlot.length) return {};
+
+    // Decide tick density based on how many quarters are in range
+    const n = inPlot.length;
+    let mode; // "all", "yearly", "biennial"
+    if (n <= 12) {
+      mode = "all";          // up to 3 years: show every quarter label
+    } else if (n <= 40) {
+      mode = "yearly";       // medium: show roughly yearly ticks
+    } else {
+      mode = "biennial";     // long horizon: show every 2 years
+    }
+
+    // Helper: pick one representative quarter per year (prefer Q1, else Q1 in that year, else fallback)
+    const periodSet = new Set(inPlot);
+    const firstParts = parsePeriodParts(inPlot[0]);
+    const lastParts  = parsePeriodParts(inPlot[inPlot.length - 1]);
+    if (!firstParts || !lastParts) return {};
+
+    const tickvals = [];
+    const ticktext = [];
+    const stepYears = mode === "biennial" ? 2 : 1;
+
+    for (let y = firstParts.year; y <= lastParts.year; y += stepYears) {
+      let candidate = `${y}Q1`;
+      if (!periodSet.has(candidate)) {
+        // Try to find Q1 in this year in the plot range
+        const alt = inPlot.find(p => {
+          const parts = parsePeriodParts(p);
+          return parts && parts.year === y && parts.q === 1;
+        });
+        if (!alt) {
+          // Fallback: any quarter in this year in the plot range
+          const fallback = inPlot.find(p => {
+            const parts = parsePeriodParts(p);
+            return parts && parts.year === y;
+          });
+          if (fallback) candidate = fallback; else continue;
+        } else {
+          candidate = alt;
+        }
+      }
+      if (!periodInRange(candidate, ranges.plotMin, ranges.plotMax)) continue;
+      tickvals.push(candidate);
+      ticktext.push(String(y));
+    }
+
+    if (mode === "all") {
+      // For short ranges, show all quarter labels
+      return {
+        tickmode: "array",
+        tickvals: inPlot,
+        ticktext: inPlot
+      };
+    }
+
+    // For yearly/biennial: always use full Qx labels for tickvals, year for ticktext
+    return {
+      tickmode: "array",
+      tickvals: tickvals,     // full Qx labels preserved
+      ticktext: ticktext      // year-only text
+    };
   }
 
   function getSeries(scenario, colName, minPeriod, maxPeriod) {
@@ -939,31 +1050,20 @@
       return {
         x: series.x,
         y: series.y,
+        customdata: series.x,
         mode: "lines",
         name: s.name,
         line: { color: s.color },
-        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+        hovertemplate: "%{customdata}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
       };
     });
     const layout = {
       title: "Policy Rate (%)",
       margin: { t: 40, r: 10, b: 40, l: 55 },
-      xaxis: {},
+      xaxis: buildXAxisLayout(ranges),
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-policy", traces, layout, { responsive: true });
   }
@@ -980,31 +1080,20 @@
       return {
         x: raw.x,
         y: steppedY,
+        customdata: raw.x,
         mode: "lines",
         name: s.name,
         line: { color: s.color, dash: "dot" },
-        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+        hovertemplate: "%{customdata}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
       };
     });
     const layout = {
       title: "Policy Rate (%, in 0.25 increments)",
       margin: { t: 40, r: 10, b: 40, l: 55 },
-      xaxis: {},
+      xaxis: buildXAxisLayout(ranges),
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-policy-step", traces, layout, { responsive: true });
   }
@@ -1017,31 +1106,20 @@
       return {
         x: series.x,
         y: series.y,
+        customdata: series.x,
         mode: "lines",
         name: s.name,
         line: { color: s.color },
-        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+        hovertemplate: "%{customdata}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
       };
     });
     const layout = {
       title: "Output Gap (%)",
       margin: { t: 40, r: 10, b: 40, l: 55 },
-      xaxis: {},
+      xaxis: buildXAxisLayout(ranges),
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-output-gap", traces, layout, { responsive: true });
   }
@@ -1062,41 +1140,31 @@
       traces.push({
         x: seriesY.x,
         y: yLn,
+        customdata: seriesY.x,
         mode: "lines",
         name: s.name + " — Output",
         line: { color: s.color },
-        hovertemplate: "%{x}<br>" + s.name + " — Output: %{y:.2f}<extra></extra>"
+        hovertemplate: "%{customdata}<br>" + s.name + " — Output: %{y:.2f}<extra></extra>"
       });
 
       traces.push({
         x: seriesYtrnd.x,
         y: yTrndLn,
+        customdata: seriesYtrnd.x,
         mode: "lines",
         name: s.name + " — Potential",
         line: { color: s.color, dash: "dot" },
-        hovertemplate: "%{x}<br>" + s.name + " — Potential: %{y:.2f}<extra></extra>"
+        hovertemplate: "%{customdata}<br>" + s.name + " — Potential: %{y:.2f}<extra></extra>"
       });
     });
 
     const layout = {
       title: "Output & Potential Output",
       margin: { t: 40, r: 10, b: 40, l: 55 },
-      xaxis: {},
+      xaxis: buildXAxisLayout(ranges),
       yaxis: { title: "Level (ln × 100)" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-output-levels", traces, layout, { responsive: true });
   }
@@ -1108,31 +1176,20 @@
       return {
         x: series.x,
         y: series.y,
+        customdata: series.x,
         mode: "lines",
         name: s.name,
         line: { color: s.color },
-        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+        hovertemplate: "%{customdata}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
       };
     });
     const layout = {
       title: "Headline Inflation (%YoY)",
       margin: { t: 40, r: 10, b: 40, l: 55 },
-      xaxis: {},
+      xaxis: buildXAxisLayout(ranges),
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-headline-yoy", traces, layout, { responsive: true });
   }
@@ -1144,31 +1201,20 @@
       return {
         x: series.x,
         y: series.y,
+        customdata: series.x,
         mode: "lines",
         name: s.name,
         line: { color: s.color },
-        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+        hovertemplate: "%{customdata}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
       };
     });
     const layout = {
       title: "Core Inflation (%YoY)",
       margin: { t: 40, r: 10, b: 40, l: 55 },
-      xaxis: {},
+      xaxis: buildXAxisLayout(ranges),
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-core-yoy", traces, layout, { responsive: true });
   }
@@ -1180,31 +1226,20 @@
       return {
         x: series.x,
         y: series.y,
+        customdata: series.x,
         mode: "lines",
         name: s.name,
         line: { color: s.color },
-        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+        hovertemplate: "%{customdata}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
       };
     });
     const layout = {
       title: "Ann. Potential Growth (%)",
       margin: { t: 40, r: 10, b: 40, l: 55 },
-      xaxis: {},
+      xaxis: buildXAxisLayout(ranges),
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-potential-growth", traces, layout, { responsive: true });
   }
@@ -1216,31 +1251,20 @@
       return {
         x: series.x,
         y: series.y,
+        customdata: series.x,
         mode: "lines",
         name: s.name,
         line: { color: s.color },
-        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+        hovertemplate: "%{customdata}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
       };
     });
     const layout = {
       title: "Core Inflation (%QoQ Ann.)",
       margin: { t: 40, r: 10, b: 40, l: 55 },
-      xaxis: {},
+      xaxis: buildXAxisLayout(ranges),
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-core-qoq", traces, layout, { responsive: true });
   }
@@ -1252,31 +1276,20 @@
       return {
         x: series.x,
         y: series.y,
+        customdata: series.x,
         mode: "lines",
         name: s.name,
         line: { color: s.color },
-        hovertemplate: "%{x}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
+        hovertemplate: "%{customdata}<br>" + s.name + ": %{y:.2f}%<extra></extra>"
       };
     });
     const layout = {
       title: "Headline Inflation (%QoQ Ann.)",
       margin: { t: 40, r: 10, b: 40, l: 55 },
-      xaxis: {},
+      xaxis: buildXAxisLayout(ranges),
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-headline-qoq", traces, layout, { responsive: true });
   }
