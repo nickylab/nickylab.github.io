@@ -120,18 +120,19 @@
       display: none;
     }
     .charts-grid {
-      display: grid;
-      grid-template-columns: 1fr;
+      display: flex;
+      flex-wrap: wrap;
       gap: 16px;
-      align-items: stretch;
-    }
-    @media (min-width: 960px) {
-      .charts-grid {
-        grid-template-columns: 1fr 1fr;
-      }
     }
     .chart-box {
-      min-height: 260px;
+      flex: 0 0 calc(50% - 8px); /* always half width on desktop */
+      min-width: 0;
+      height: 260px;
+    }
+    @media (max-width: 959px) {
+      .chart-box {
+        flex: 0 0 100%;          /* full width on smaller screens */
+      }
     }
     table {
       border-collapse: collapse;
@@ -432,14 +433,7 @@
   const defaultActualMin = "2019Q4";
   let availablePeriods = [];
   let currentScenarios = [];
-let colorCodeTableHeaders = false;
-
-// Shared Plotly config for all charts (hide mode bar, etc.)
-const plotConfig = {
-  responsive: true,
-  displaylogo: false,
-  displayModeBar: false
-};
+  let colorCodeTableHeaders = false;
 
   const tableVarConfig = {
     ygap: {
@@ -927,7 +921,6 @@ const plotConfig = {
     });
     const layout = {
       title: "Policy Rate (%)",
-      height: 260,
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
@@ -946,7 +939,7 @@ const plotConfig = {
         }
       ]
     };
-    Plotly.newPlot("chart-policy", traces, layout, plotConfig);
+    Plotly.newPlot("chart-policy", traces, layout, { responsive: true });
   }
 
   function renderPolicyStepChart(scenarios, ranges) {
@@ -969,7 +962,6 @@ const plotConfig = {
     });
     const layout = {
       title: "Policy Rate (%, in 0.25 increments)",
-      height: 260,
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
@@ -988,7 +980,7 @@ const plotConfig = {
         }
       ]
     };
-    Plotly.newPlot("chart-policy-step", traces, layout, plotConfig);
+    Plotly.newPlot("chart-policy-step", traces, layout, { responsive: true });
   }
 
 
@@ -1007,7 +999,6 @@ const plotConfig = {
     });
     const layout = {
       title: "Output Gap (%)",
-      height: 260,
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
@@ -1026,7 +1017,7 @@ const plotConfig = {
         }
       ]
     };
-    Plotly.newPlot("chart-output-gap", traces, layout, plotConfig);
+    Plotly.newPlot("chart-output-gap", traces, layout, { responsive: true });
   }
 
   // 2) Output & Potential Output: y & ytrnd
@@ -1063,7 +1054,6 @@ const plotConfig = {
 
     const layout = {
       title: "Output & Potential Output",
-      height: 260,
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
       yaxis: { title: "Level (ln × 100)" },
@@ -1082,7 +1072,7 @@ const plotConfig = {
         }
       ]
     };
-    Plotly.newPlot("chart-output-levels", traces, layout, plotConfig);
+    Plotly.newPlot("chart-output-levels", traces, layout, { responsive: true });
   }
 
   // 3) Headline Inflation (%YoY): picpi4
@@ -1100,7 +1090,6 @@ const plotConfig = {
     });
     const layout = {
       title: "Headline Inflation (%YoY)",
-      height: 260,
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
@@ -1119,7 +1108,7 @@ const plotConfig = {
         }
       ]
     };
-    Plotly.newPlot("chart-headline-yoy", traces, layout, plotConfig);
+    Plotly.newPlot("chart-headline-yoy", traces, layout, { responsive: true });
   }
 
   // 4) Core Inflation (%YoY): pi4
@@ -1137,7 +1126,6 @@ const plotConfig = {
     });
     const layout = {
       title: "Core Inflation (%YoY)",
-      height: 260,
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
@@ -1156,7 +1144,7 @@ const plotConfig = {
         }
       ]
     };
-    Plotly.newPlot("chart-core-yoy", traces, layout, plotConfig);
+    Plotly.newPlot("chart-core-yoy", traces, layout, { responsive: true });
   }
 
   // 7) Ann. Potential Growth (%): dytrnd
@@ -1174,7 +1162,6 @@ const plotConfig = {
     });
     const layout = {
       title: "Ann. Potential Growth (%)",
-      height: 260,
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
@@ -1193,7 +1180,7 @@ const plotConfig = {
         }
       ]
     };
-    Plotly.newPlot("chart-potential-growth", traces, layout, plotConfig);
+    Plotly.newPlot("chart-potential-growth", traces, layout, { responsive: true });
   }
 
   // 8) Core Inflation (%QoQ Ann.): pi
@@ -1211,7 +1198,6 @@ const plotConfig = {
     });
     const layout = {
       title: "Core Inflation (%QoQ Ann.)",
-      height: 260,
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
@@ -1230,7 +1216,7 @@ const plotConfig = {
         }
       ]
     };
-    Plotly.newPlot("chart-core-qoq", traces, layout, plotConfig);
+    Plotly.newPlot("chart-core-qoq", traces, layout, { responsive: true });
   }
 
   // 9) Headline Inflation (%QoQ Ann.): picpi
@@ -1248,7 +1234,6 @@ const plotConfig = {
     });
     const layout = {
       title: "Headline Inflation (%QoQ Ann.)",
-      height: 260,
       margin: { t: 40, r: 10, b: 40, l: 55 },
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
@@ -1267,7 +1252,7 @@ const plotConfig = {
         }
       ]
     };
-    Plotly.newPlot("chart-headline-qoq", traces, layout, plotConfig);
+    Plotly.newPlot("chart-headline-qoq", traces, layout, { responsive: true });
   }
 
 
