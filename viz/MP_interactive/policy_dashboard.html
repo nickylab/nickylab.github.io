@@ -358,7 +358,7 @@
           </label>
           <label class="chart-pill-label" style="display:inline-flex;align-items:center;gap:4px;">
             <input type="checkbox" class="chart-toggle" data-chart-id="chart-policy-step">
-            <span>Policy (0.25 step)</span>
+            <span>Policy Rate (step)</span>
           </label>
           <label class="chart-pill-label" style="display:inline-flex;align-items:center;gap:4px;">
             <input type="checkbox" class="chart-toggle" data-chart-id="chart-potential-growth">
@@ -395,24 +395,36 @@
             <input type="checkbox" id="color-code-headers">
             <span>Color‑code scenarios</span>
           </label>
-          <div class="table-vars">
-            <label class="table-var-toggle">
-              <input type="checkbox" class="table-var-checkbox" data-var-id="ygap" checked>
-              <span>Output Gap (%)</span>
-            </label>
-            <label class="table-var-toggle">
-              <input type="checkbox" class="table-var-checkbox" data-var-id="policy" checked>
-              <span>Policy Rate (%)</span>
-            </label>
-            <label class="table-var-toggle">
-              <input type="checkbox" class="table-var-checkbox" data-var-id="policyStep" checked>
-              <span>Policy Rate (step)</span>
-            </label>
-            <label class="table-var-toggle">
-              <input type="checkbox" class="table-var-checkbox" data-var-id="gdp">
-              <span>Real GDP yoy</span>
-            </label>
-          </div>
+            <div class="table-vars">
+                <label class="table-var-toggle">
+                <input type="checkbox" class="table-var-checkbox" data-var-id="ygap" checked>
+                <span>Output Gap</span>
+                </label>
+                <label class="table-var-toggle">
+                <input type="checkbox" class="table-var-checkbox" data-var-id="policy" checked>
+                <span>Policy Rate</span>
+                </label>
+                <label class="table-var-toggle">
+                <input type="checkbox" class="table-var-checkbox" data-var-id="policyStep" checked>
+                <span>Policy Rate (step)</span>
+                </label>
+                <label class="table-var-toggle">
+                <input type="checkbox" class="table-var-checkbox" data-var-id="headlineYoy">
+                <span>Headline YoY</span>
+                </label>
+                <label class="table-var-toggle">
+                <input type="checkbox" class="table-var-checkbox" data-var-id="coreYoy">
+                <span>Core YoY</span>
+                </label>
+                <label class="table-var-toggle">
+                <input type="checkbox" class="table-var-checkbox" data-var-id="gdp">
+                <span>GDP Growth YoY</span>
+                </label>
+                <label class="table-var-toggle">
+                <input type="checkbox" class="table-var-checkbox" data-var-id="annualGdp">
+                <span>Annual GDP Growth YoY</span>
+                </label>
+            </div>
         </div>
       </div>
       <div id="summary-legend" style="margin-bottom:8px;font-size:11px;color:var(--muted);display:none;"></div>
@@ -444,12 +456,12 @@
     },
     policy: {
       id: "policy",
-      label: "Policy Rate",
+      label: "Policy Rate (%)",
       accessor: r => Number(r.i)
     },
     policyStep: {
       id: "policyStep",
-      label: "Policy Rate (step)",
+      label: "Policy Rate (%, step)",
       accessor: r => {
         const v = Number(r.i);
         if (typeof v === "number" && !isNaN(v)) {
@@ -458,12 +470,69 @@
         return NaN;
       }
     },
+    headlineYoy: {
+      id: "headlineYoy",
+      label: "Headline Inflation (%YoY)",
+      accessor: r => Number(r.picpi4)
+    },
+    coreYoy: {
+      id: "coreYoy",
+      label: "Core Inflation (%YoY)",
+      accessor: r => Number(r.pi4)
+    },
     gdp: {
       id: "gdp",
-      label: "Real GDP yoy (dy4_r)",
-      accessor: r => Number(r.dy4_r)
+      label: "GDP Growth (%YoY)",
+      accessor: r => Number(r.y_growth)
+    },
+    annualGdp: {
+      id: "annualGdp",
+      label: "Annual GDP Growth (%YoY)",
+      accessor: r => Number(r.annual_GDP)
     }
   };
+
+
+  function augmentScenarioDataWithGrowth(rows) {
+    if (!Array.isArray(rows)) return rows;
+
+    const validRows = rows.filter(r =>
+      r.period != null &&
+      r.period !== "" &&
+      parsePeriodToIndex(r.period) != null
+    );
+
+    const indexMap = {};
+    validRows.forEach(r => {
+      const idx = parsePeriodToIndex(r.period);
+      if (idx != null) indexMap[idx] = r;
+    });
+
+    validRows.forEach(r => {
+      const idx = parsePeriodToIndex(r.period);
+      const prev = idx != null ? indexMap[idx - 4] : null;
+
+      const yNow  = typeof r.y === "number" ? r.y : null;
+      const yPrev = prev && typeof prev.y === "number" ? prev.y : null;
+
+      // y_growth = (y / lag(y, 4) - 1) * 100
+      if (yNow != null && yPrev != null && yPrev !== 0) {
+        r.y_growth = (yNow / yPrev - 1) * 100;
+      } else {
+        r.y_growth = null;
+      }
+
+      const p = String(r.period).trim();
+      if (/Q4$/.test(p) && typeof r.dyA_nonsa === "number") {
+        r.annual_GDP = r.dyA_nonsa;
+      } else {
+        r.annual_GDP = null;
+      }
+    });
+
+    return rows;
+  }
+
 
   function getCurrentQuarterLabel() {
     const now = new Date();
@@ -688,6 +757,7 @@
           skipEmptyLines: true,
           complete: results => {
             const rows = results.data.filter(r => r.period != null && r.period !== "");
+            augmentScenarioDataWithGrowth(rows);
             s.data = rows;
             refreshAvailablePeriodsAndSelects();
           },
@@ -739,6 +809,7 @@
         skipEmptyLines: true,
         complete: results => {
           const rows = results.data.filter(r => r.period != null && r.period !== "");
+          augmentScenarioDataWithGrowth(rows);
           scenario.data = rows;
           resolve(scenario);
         },
