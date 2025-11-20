@@ -162,10 +162,11 @@
       margin: 0;
     }
     .chart-toggle,
-    .table-var-checkbox {
-      position: absolute;
-      opacity: 0;
-      pointer-events: none;
+    .table-var-checkbox,
+    .table-frequency-radio {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
     }
     .chart-pill-label,
     .table-var-toggle {
@@ -175,22 +176,24 @@
       position: relative;
     }
     .chart-toggle + span,
-    .table-var-checkbox + span {
-      padding: 3px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: #ffffff;
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 500;
-      cursor: pointer;
-      white-space: nowrap;
+    .table-var-checkbox + span,
+    .table-frequency-radio + span {
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
     }
     .chart-toggle:checked + span,
-    .table-var-checkbox:checked + span {
-      border-color: var(--accent);
-      background: rgba(37,99,235,0.07);
-      color: var(--accent);
+    .table-var-checkbox:checked + span,
+    .table-frequency-radio:checked + span {
+    border-color: var(--accent);
+    background: rgba(37,99,235,0.07);
+    color: var(--accent);
     }
     .table-vars {
       display: inline-flex;
@@ -251,7 +254,7 @@
 <header>
   <h1>MPC Policy Rate Projection Dashboard</h1>
   <p class="lede">
-    Upload MPC projection CSVs (chartpackcsv), then compare output gaps and policy rate projections across scenarios.
+    Upload MPC projections (chartpackcsv), then compare output gaps and policy rate projections across scenarios.
   </p>
 </header>
 
@@ -388,44 +391,57 @@
     </div>
 
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:12px;flex-wrap:wrap;">
         <h3 style="margin:0;font-size:14px;">Summary table</h3>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <label class="table-option">
-            <input type="checkbox" id="color-code-headers">
-            <span>Color‑code scenarios</span>
-          </label>
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;">
+          <!-- View (Q vs Y) -->
+          <div style="display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:11px;color:var(--muted);">View:</span>
+            <label class="table-var-toggle">
+              <input type="radio" class="table-frequency-radio" name="table-frequency" value="quarterly" checked>
+              <span>Quarterly</span>
+            </label>
+            <label class="table-var-toggle">
+              <input type="radio" class="table-frequency-radio" name="table-frequency" value="yearly">
+              <span>Yearly</span>
+            </label>
+          </div>
+          <!-- Variables -->
+          <div>
+            <span style="display:inline-block;margin-bottom:2px;font-size:11px;color:var(--muted);">Variables:</span>
             <div class="table-vars">
-                <label class="table-var-toggle">
+              <label class="table-var-toggle">
                 <input type="checkbox" class="table-var-checkbox" data-var-id="ygap" checked>
                 <span>Output Gap</span>
-                </label>
-                <label class="table-var-toggle">
+              </label>
+              <label class="table-var-toggle">
                 <input type="checkbox" class="table-var-checkbox" data-var-id="policy" checked>
                 <span>Policy Rate</span>
-                </label>
-                <label class="table-var-toggle">
+              </label>
+              <label class="table-var-toggle">
                 <input type="checkbox" class="table-var-checkbox" data-var-id="policyStep" checked>
                 <span>Policy Rate (step)</span>
-                </label>
-                <label class="table-var-toggle">
+              </label>
+              <label class="table-var-toggle">
                 <input type="checkbox" class="table-var-checkbox" data-var-id="headlineYoy">
                 <span>Headline YoY</span>
-                </label>
-                <label class="table-var-toggle">
+              </label>
+              <label class="table-var-toggle">
                 <input type="checkbox" class="table-var-checkbox" data-var-id="coreYoy">
                 <span>Core YoY</span>
-                </label>
-                <label class="table-var-toggle">
+              </label>
+              <label class="table-var-toggle">
                 <input type="checkbox" class="table-var-checkbox" data-var-id="gdp">
                 <span>GDP Growth YoY</span>
-                </label>
-                <label class="table-var-toggle">
-                <input type="checkbox" class="table-var-checkbox" data-var-id="annualGdp">
-                <span>Annual GDP Growth YoY</span>
-                </label>
+              </label>
             </div>
+          </div>
         </div>
+        <!-- Color-code toggle separated on the right -->
+        <label class="table-option" style="align-self:flex-start;">
+          <input type="checkbox" id="color-code-headers">
+          <span>Color-code scenarios</span>
+        </label>
       </div>
       <div id="summary-legend" style="margin-bottom:8px;font-size:11px;color:var(--muted);display:none;"></div>
       <div id="summary-tables"></div>
@@ -447,6 +463,7 @@
   let availablePeriods = [];
   let currentScenarios = [];
   let colorCodeTableHeaders = false;
+    let summaryFrequency = "quarterly"; // "quarterly" or "yearly"
 
   const tableVarConfig = {
     ygap: {
@@ -484,11 +501,6 @@
       id: "gdp",
       label: "GDP Growth (%YoY)",
       accessor: r => Number(r.y_growth)
-    },
-    annualGdp: {
-      id: "annualGdp",
-      label: "Annual GDP Growth (%YoY)",
-      accessor: r => Number(r.annual_GDP)
     }
   };
 
@@ -502,13 +514,37 @@
       parsePeriodToIndex(r.period) != null
     );
 
+    if (!validRows.length) return rows;
+
+    // Sort by time so we can compute 4-quarter rolling stats
+    const sorted = [...validRows].sort((a, b) => {
+      return parsePeriodToIndex(a.period) - parsePeriodToIndex(b.period);
+    });
+
     const indexMap = {};
-    validRows.forEach(r => {
+    sorted.forEach(r => {
       const idx = parsePeriodToIndex(r.period);
       if (idx != null) indexMap[idx] = r;
     });
 
-    validRows.forEach(r => {
+    function rollingMean(key, i) {
+      const window = 4;
+      if (i < window - 1) return null;
+      let sum = 0;
+      let count = 0;
+      for (let k = i - window + 1; k <= i; k++) {
+        const v = sorted[k][key];
+        if (typeof v !== "number" || isNaN(v)) return null;
+        sum += v;
+        count++;
+      }
+      if (count < window) return null;
+      return sum / count;
+    }
+
+    // First pass: compute quarterly y_growth, annual_GDP, and 4Q rolling means
+    for (let i = 0; i < sorted.length; i++) {
+      const r = sorted[i];
       const idx = parsePeriodToIndex(r.period);
       const prev = idx != null ? indexMap[idx - 4] : null;
 
@@ -519,16 +555,51 @@
       if (yNow != null && yPrev != null && yPrev !== 0) {
         r.y_growth = (yNow / yPrev - 1) * 100;
       } else {
-        r.y_growth = null;
+        r.y_growth = r.y_growth ?? null;
       }
 
       const p = String(r.period).trim();
       if (/Q4$/.test(p) && typeof r.dyA_nonsa === "number") {
         r.annual_GDP = r.dyA_nonsa;
       } else {
-        r.annual_GDP = null;
+        r.annual_GDP = r.annual_GDP ?? null;
       }
-    });
+
+      // 4-quarter averages for yearly view
+      const avgGap = rollingMean("ygap", i);
+      if (avgGap != null) {
+        r.avg_ygap = avgGap;
+      }
+
+      const cpiMA = rollingMean("cpi_nonsa", i);
+      if (cpiMA != null) {
+        r.cpi_ma4 = cpiMA;
+      }
+
+      const coreMA = rollingMean("core_nonsa", i);
+      if (coreMA != null) {
+        r.core_ma4 = coreMA;
+      }
+    }
+
+    // Second pass: yearly HL_inf and CORE_inf from 4Q moving averages
+    for (let i = 0; i < sorted.length; i++) {
+      const r = sorted[i];
+      const idx = parsePeriodToIndex(r.period);
+      const prev = idx != null ? indexMap[idx - 4] : null;
+
+      if (typeof r.cpi_ma4 === "number" && prev && typeof prev.cpi_ma4 === "number" && prev.cpi_ma4 !== 0) {
+        r.HL_inf = (r.cpi_ma4 / prev.cpi_ma4 - 1) * 100;
+      } else {
+        r.HL_inf = r.HL_inf ?? null;
+      }
+
+      if (typeof r.core_ma4 === "number" && prev && typeof prev.core_ma4 === "number" && prev.core_ma4 !== 0) {
+        r.CORE_inf = (r.core_ma4 / prev.core_ma4 - 1) * 100;
+      } else {
+        r.CORE_inf = r.CORE_inf ?? null;
+      }
+    }
 
     return rows;
   }
@@ -952,6 +1023,16 @@
     const tableVarCheckboxes = document.querySelectorAll(".table-var-checkbox");
     tableVarCheckboxes.forEach(cb => {
       cb.addEventListener("change", reRenderIfReady);
+    });
+    const freqRadios = document.querySelectorAll(".table-frequency-radio");
+    freqRadios.forEach(r => {
+      if (r.checked) summaryFrequency = r.value;
+      r.addEventListener("change", e => {
+        if (e.target.checked) {
+          summaryFrequency = e.target.value;
+          reRenderIfReady();
+        }
+      });
     });
   });
 
@@ -1388,6 +1469,9 @@
       label: tableVarConfig[id].label
     }));
 
+    // Decide frequency: quarterly or yearly
+    const isYearly = (summaryFrequency === "yearly");
+
     // Collect all periods within the table range across all scenarios
     const periodSet = new Set();
     scenarios.forEach(s => {
@@ -1399,7 +1483,7 @@
       });
     });
 
-    const periods = Array.from(periodSet);
+    let periods = Array.from(periodSet);
     periods.sort((a, b) => parsePeriodToIndex(a) - parsePeriodToIndex(b));
 
     if (!periods.length) {
@@ -1407,7 +1491,65 @@
       return;
     }
 
-    // For each scenario, build a lookup: period -> raw row
+    // Yearly aggregation helpers
+    let yearlyPeriods = [];
+    let yearlyLookups = {};
+    if (isYearly) {
+      // Build yearly period list: use the year extracted from any 4Q or any quarter in that year
+      const yearSet = new Set();
+      periods.forEach(p => {
+        const parts = parsePeriodParts(p);
+        if (parts) yearSet.add(parts.year);
+      });
+      const years = Array.from(yearSet).sort((a, b) => a - b);
+      yearlyPeriods = years.map(y => String(y));
+
+      // For each scenario, compute yearly aggregates
+      scenarios.forEach(s => {
+        const ymap = {};
+        const byYear = {};
+
+        (s.data || []).forEach(r => {
+          const p = r.period;
+          if (p == null || p === "") return;
+          if (!periodInRange(p, tableMin, tableMax)) return;
+          const parts = parsePeriodParts(p);
+          if (!parts) return;
+          const year = parts.year;
+          if (!byYear[year]) byYear[year] = [];
+          byYear[year].push(r);
+        });
+
+        Object.keys(byYear).forEach(yk => {
+          const year = parseInt(yk, 10);
+          const rows = byYear[year].sort((a, b) => parsePeriodToIndex(a.period) - parsePeriodToIndex(b.period));
+
+          const candidateQ4 = rows.find(r => {
+            const parts = parsePeriodParts(r.period);
+            return parts && parts.q === 4;
+          });
+          const repRow = candidateQ4 || rows[rows.length - 1];
+
+          const aggregated = Object.assign({}, repRow);
+
+          if (Array.isArray(rows) && rows.length) {
+            const last = rows[rows.length - 1];
+            aggregated.ygap = (typeof last.avg_ygap === "number") ? last.avg_ygap : aggregated.ygap;
+            aggregated.picpi4 = (typeof last.HL_inf === "number") ? last.HL_inf : aggregated.picpi4;
+            aggregated.pi4 = (typeof last.CORE_inf === "number") ? last.CORE_inf : aggregated.pi4;
+            aggregated.y_growth = (typeof last.dyA_nonsa === "number") ? last.dyA_nonsa : aggregated.y_growth;
+            aggregated.annual_GDP = (typeof last.dyA_nonsa === "number") ? last.dyA_nonsa : aggregated.annual_GDP;
+          }
+
+          aggregated.period = String(year);
+          ymap[aggregated.period] = aggregated;
+        });
+
+        yearlyLookups[s.name] = ymap;
+      });
+    }
+
+    // For each scenario, build a lookup: period -> raw row (quarterly)
     const lookups = {};
     scenarios.forEach(s => {
       const map = {};
@@ -1427,11 +1569,13 @@
       scenarioColorMap[s.name] = s.color;
     });
 
+    const displayPeriods = isYearly ? yearlyPeriods : periods;
+
     let html = `
       <table>
         <thead>
           <tr>
-            <th rowspan="2">Period</th>
+            <th rowspan="2">${isYearly ? "Year" : "Period"}</th>
     `;
 
     // First header row: variable names spanning all scenarios
@@ -1459,31 +1603,61 @@
         <tbody>
     `;
 
-    // Body rows: one per period
-    periods.forEach(p => {
-      html += `<tr><td>${p}</td>`;
-      vars.forEach(v => {
-        const cfg = tableVarConfig[v.id];
-        scenariosOrdered.forEach(name => {
-          const lu = lookups[name] || {};
-          const rec = lu[p];
-          let val = "";
-          if (rec && cfg && typeof cfg.accessor === "function") {
-            const raw = cfg.accessor(rec);
-            if (typeof raw === "number" && !isNaN(raw)) {
-              val = raw.toFixed(2);
+    // Body rows
+    if (!isYearly) {
+      // Quarterly: one row per period
+      displayPeriods.forEach(p => {
+        html += `<tr><td>${p}</td>`;
+        vars.forEach(v => {
+          const cfg = tableVarConfig[v.id];
+          scenariosOrdered.forEach(name => {
+            const lu = lookups[name] || {};
+            const rec = lu[p];
+            const color = colorCodeTableHeaders ? scenarioColorMap[name] : null;
+            const styleAttr = color ? ` style="color:${color};"` : "";
+            let val = "";
+            if (rec && cfg && typeof cfg.accessor === "function") {
+              const raw = cfg.accessor(rec);
+              if (typeof raw === "number" && !isNaN(raw)) {
+                val = raw.toFixed(2);
+              }
             }
-          }
-          const color = colorCodeTableHeaders ? scenarioColorMap[name] : null;
-          const styleAttr = color ? ` style="color:${color};"` : "";
-          html += `<td${styleAttr}>${val}</td>`;
+            html += `<td${styleAttr}>${val}</td>`;
+          });
         });
+        html += `</tr>`;
       });
-      html += `</tr>`;
-    });
+    } else {
+      // Yearly: one row per year
+      displayPeriods.forEach(yearStr => {
+        html += `<tr><td>${yearStr}</td>`;
+        const year = parseInt(yearStr, 10);
+
+        vars.forEach(v => {
+          scenariosOrdered.forEach(name => {
+            const color = colorCodeTableHeaders ? scenarioColorMap[name] : null;
+            const styleAttr = color ? ` style="color:${color};"` : "";
+            const cfg = tableVarConfig[v.id];
+
+            const ymap = yearlyLookups[name] || {};
+            const rec = ymap[yearStr];
+
+            let val = "";
+            if (rec && cfg && typeof cfg.accessor === "function") {
+              const raw = cfg.accessor(rec);
+              if (typeof raw === "number" && !isNaN(raw)) {
+                val = raw.toFixed(2);
+              }
+            }
+            html += `<td${styleAttr}>${val}</td>`;
+          });
+        });
+
+        html += `</tr>`;
+      });
+    }
 
     html += "</tbody></table>";
-
     summaryTablesEl.innerHTML = html;
   }
 </script>
