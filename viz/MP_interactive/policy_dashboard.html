@@ -239,6 +239,17 @@
       font-size: 11px;
       color: var(--muted);
     }
+
+    #summary-tables {
+      width: 100%;
+      overflow-x: auto;
+      padding-bottom: 12px; /* extra space so horizontal scrollbar does not overlap last row */
+    }
+
+    #summary-tables table {
+      width: auto;
+      min-width: 100%;
+    }
     .site-footer {
       max-width: 1100px;
       margin: 0 auto 24px;
@@ -337,8 +348,8 @@
           <div id="download-wrapper" class="download-wrapper">
             <button id="download-toggle" class="btn btn-primary">Download dashboard (.html)</button>
             <div id="download-menu" class="download-menu">
-              <button type="button" data-export-mode="interactive">Interactive version (with controls)</button>
-              <button type="button" data-export-mode="fixed">Fixed snapshot (no controls)</button>
+              <button type="button" data-export-mode="interactive">Interactive</button>
+              <button type="button" data-export-mode="fixed">Snapshot</button>
             </div>
           </div>
           <button id="back-to-config" class="btn btn-ghost">Back to file selection</button>
@@ -864,7 +875,18 @@
       return;
     }
     const id = Date.now() + "_" + Math.random().toString(16).slice(2);
-    const defaultColors = ["#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd","#8c564b"];
+    const defaultColors = [
+      "#1f77b4", // blue
+      "#ff7f0e", // orange
+      "#2ca02c", // green
+      "#d62728", // red
+      "#9467bd", // purple
+      "#8c564b", // brown
+      "#e377c2", // pink
+      "#7f7f7f", // gray
+      "#bcbd22", // olive
+      "#17becf"  // teal
+    ];
     const scenario = {
       id,
       name: "",
