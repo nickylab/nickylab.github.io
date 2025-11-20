@@ -329,6 +329,7 @@
         <h2 style="margin:0;">Interactive dashboard</h2>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="pill" id="scenario-count-label"></span>
+          <button id="download-dashboard" class="btn btn-primary">Download dashboard (.html)</button>
           <button id="back-to-config" class="btn btn-ghost">Back to file selection</button>
         </div>
       </div>
@@ -621,6 +622,7 @@
   const dashboardStepEl  = document.getElementById("dashboard-step");
   const backToConfigBtn  = document.getElementById("back-to-config");
   const scenarioCountLbl = document.getElementById("scenario-count-label");
+  const downloadDashboardBtn = document.getElementById("download-dashboard");
   const summaryTablesEl  = document.getElementById("summary-tables");
   const rangeConfigEl    = document.getElementById("range-config");
   const scenarioLegendEl = document.getElementById("scenario-legend");
@@ -952,6 +954,105 @@
       rangeActionsEl.style.display = "flex";
     }
   });
+  if (downloadDashboardBtn) {
+    downloadDashboardBtn.addEventListener("click", downloadStandaloneDashboard);
+  }
+  function downloadStandaloneDashboard() {
+    if (!currentScenarios || !currentScenarios.length) {
+      alert("Please build the dashboard before downloading.");
+      return;
+    }
+
+    // Prepare data to embed
+    const exportScenarios = currentScenarios.map(s => ({
+      name: s.name,
+      color: s.color,
+      data: s.data
+    }));
+    const ranges = getRangeConfig();
+
+    // Serialize current document HTML
+    const htmlNode = document.documentElement;
+    let docHtml = htmlNode.outerHTML;
+
+    // Safely stringify data for injection inside a <script>
+    const exportScenariosJson = JSON.stringify(exportScenarios).replace(/<\/script/gi, "<\\/script");
+    const exportRangesJson = JSON.stringify(ranges).replace(/<\/script/gi, "<\\/script");
+    const exportSummaryFreqJson = JSON.stringify(summaryFrequency);
+
+    const injectionScript = `
+<script>
+(function(){
+  window.__EXPORTED_SCENARIOS = ${exportScenariosJson};
+  window.__EXPORTED_RANGES = ${exportRangesJson};
+  window.__EXPORTED_SUMMARY_FREQUENCY = ${exportSummaryFreqJson};
+  document.addEventListener("DOMContentLoaded", function(){
+    if (!window.__EXPORTED_SCENARIOS || !window.__EXPORTED_SCENARIOS.length) return;
+    currentScenarios = window.__EXPORTED_SCENARIOS;
+    availablePeriods = getAllPeriodsFromScenarios(currentScenarios);
+    populateRangeSelects();
+    if (typeof window.__EXPORTED_RANGES === "object" && window.__EXPORTED_RANGES) {
+      if (plotMinInput && window.__EXPORTED_RANGES.plotMin) plotMinInput.value = window.__EXPORTED_RANGES.plotMin;
+      if (plotMaxInput && window.__EXPORTED_RANGES.plotMax) plotMaxInput.value = window.__EXPORTED_RANGES.plotMax;
+      if (actualMaxInput && window.__EXPORTED_RANGES.actualMax) actualMaxInput.value = window.__EXPORTED_RANGES.actualMax;
+      if (tableMinInput && window.__EXPORTED_RANGES.tableMin) tableMinInput.value = window.__EXPORTED_RANGES.tableMin;
+      if (tableMaxInput && window.__EXPORTED_RANGES.tableMax) tableMaxInput.value = window.__EXPORTED_RANGES.tableMax;
+      if (actualMinInput && plotMinInput) {
+        actualMinInput.value = plotMinInput.value;
+        actualMinInput.disabled = true;
+      }
+    }
+    if (typeof window.__EXPORTED_SUMMARY_FREQUENCY === "string") {
+      summaryFrequency = window.__EXPORTED_SUMMARY_FREQUENCY;
+      var radios = document.querySelectorAll(".table-frequency-radio");
+      radios.forEach(function(r){
+        r.checked = (r.value === summaryFrequency);
+      });
+    }
+    if (configStepEl) configStepEl.style.display = "none";
+    if (backToConfigBtn) backToConfigBtn.style.display = "none";
+    if (rangeConfigEl) rangeConfigEl.style.display = "block";
+    if (rangeHeadingEl) rangeHeadingEl.textContent = "Set plot and table ranges";
+    if (rangeActionsEl) rangeActionsEl.style.display = "none";
+    if (dashboardStepEl) dashboardStepEl.style.display = "block";
+    if (scenarioCountLbl) {
+      var n = currentScenarios.length;
+      scenarioCountLbl.textContent = n + " scenario" + (n > 1 ? "s" : "") + " loaded";
+    }
+    renderDashboard(currentScenarios);
+  });
+})();
+<\/script>
+`;
+
+    const closingTag = '</body>';
+    const idx = docHtml.lastIndexOf(closingTag);
+    let finalHtml;
+    if (idx !== -1) {
+      finalHtml =
+        '<!doctype html>\n' +
+        docHtml.slice(0, idx) +
+        injectionScript +
+        docHtml.slice(idx);
+    } else {
+      // Fallback: if for some reason </body> is not found, just append the script
+      finalHtml = '<!doctype html>\n' + docHtml + injectionScript;
+    }
+
+    const blob = new Blob([finalHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date();
+    const yyyy = ts.getFullYear();
+    const mm = String(ts.getMonth() + 1).padStart(2, '0');
+    const dd = String(ts.getDate()).padStart(2, '0');
+    a.href = url;
+    a.download = 'mpc_dashboard_' + yyyy + mm + dd + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
   function reRenderIfReady() {
     if (dashboardStepEl.style.display !== "none" && currentScenarios && currentScenarios.length) {
       renderDashboard(currentScenarios);
