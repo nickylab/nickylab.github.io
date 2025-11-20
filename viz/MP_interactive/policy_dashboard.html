@@ -247,6 +247,11 @@
       color: var(--muted);
       text-align: right;
     }
+    .download-wrapper{position:relative;display:inline-flex;align-items:center;}
+    .download-menu{position:absolute;right:0;top:calc(100% + 6px);background:var(--card);border-radius:8px;border:1px solid var(--border);box-shadow:0 10px 25px rgba(15,23,42,0.12);padding:8px;min-width:220px;opacity:0;transform:translateY(-4px);pointer-events:none;transition:opacity .16s ease,transform .16s ease;z-index:20;}
+    .download-menu.open{opacity:1;transform:translateY(0);pointer-events:auto;}
+    .download-menu button{width:100%;text-align:left;border:none;background:transparent;padding:6px 8px;border-radius:6px;font-size:12px;cursor:pointer;}
+    .download-menu button:hover{background:#eff6ff;}
   </style>
 </head>
 <body>
@@ -329,7 +334,13 @@
         <h2 style="margin:0;">Interactive dashboard</h2>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="pill" id="scenario-count-label"></span>
-          <button id="download-dashboard" class="btn btn-primary">Download dashboard (.html)</button>
+          <div id="download-wrapper" class="download-wrapper">
+            <button id="download-toggle" class="btn btn-primary">Download dashboard (.html)</button>
+            <div id="download-menu" class="download-menu">
+              <button type="button" data-export-mode="interactive">Interactive version (with controls)</button>
+              <button type="button" data-export-mode="fixed">Fixed snapshot (no controls)</button>
+            </div>
+          </div>
           <button id="back-to-config" class="btn btn-ghost">Back to file selection</button>
         </div>
       </div>
@@ -339,7 +350,7 @@
       <div id="scenario-legend" style="margin-bottom:8px;font-size:11px;color:var(--muted);"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
         <h3 style="margin:0;font-size:14px;">Charts</h3>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--muted);">
+        <div id="chart-toggle-row" style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--muted);">
           <label class="chart-pill-label" style="display:inline-flex;align-items:center;gap:4px;">
             <input type="checkbox" class="chart-toggle" data-chart-id="chart-output-gap" checked>
             <span>Output Gap</span>
@@ -394,7 +405,7 @@
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:12px;flex-wrap:wrap;">
         <h3 style="margin:0;font-size:14px;">Summary table</h3>
-        <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;">
+        <div id="summary-var-controls" style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;">
           <!-- View (Q vs Y) -->
           <div style="display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span style="font-size:11px;color:var(--muted);">View:</span>
@@ -439,7 +450,7 @@
           </div>
         </div>
         <!-- Color-code toggle separated on the right -->
-        <label class="table-option" style="align-self:flex-start;">
+        <label id="summary-color-toggle" class="table-option" style="align-self:flex-start;">
           <input type="checkbox" id="color-code-headers">
           <span>Color-code scenarios</span>
         </label>
@@ -622,7 +633,9 @@
   const dashboardStepEl  = document.getElementById("dashboard-step");
   const backToConfigBtn  = document.getElementById("back-to-config");
   const scenarioCountLbl = document.getElementById("scenario-count-label");
-  const downloadDashboardBtn = document.getElementById("download-dashboard");
+  const downloadWrapperEl      = document.getElementById("download-wrapper");
+  const downloadToggleBtn      = document.getElementById("download-toggle");
+  const downloadMenuEl         = document.getElementById("download-menu");
   const summaryTablesEl  = document.getElementById("summary-tables");
   const rangeConfigEl    = document.getElementById("range-config");
   const scenarioLegendEl = document.getElementById("scenario-legend");
@@ -954,14 +967,59 @@
       rangeActionsEl.style.display = "flex";
     }
   });
-  if (downloadDashboardBtn) {
-    downloadDashboardBtn.addEventListener("click", downloadStandaloneDashboard);
+  if (downloadToggleBtn && downloadMenuEl) {
+    downloadToggleBtn.addEventListener("click", () => {
+      downloadMenuEl.classList.toggle("open");
+    });
+
+    downloadMenuEl.querySelectorAll("button[data-export-mode]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const mode = btn.getAttribute("data-export-mode");
+        const exportFixed = (mode === "fixed");
+        downloadMenuEl.classList.remove("open");
+        downloadStandaloneDashboard(exportFixed);
+      });
+    });
+
+    document.addEventListener("click", evt => {
+      if (!downloadWrapperEl) return;
+      if (!downloadWrapperEl.contains(evt.target)) {
+        downloadMenuEl.classList.remove("open");
+      }
+    });
   }
-  function downloadStandaloneDashboard() {
+
+  function downloadStandaloneDashboard(exportFixed) {
     if (!currentScenarios || !currentScenarios.length) {
       alert("Please build the dashboard before downloading.");
       return;
     }
+
+    // Capture current UI state (chart visibility, table variables, color-coding)
+    const chartSelections = {};
+    document.querySelectorAll(".chart-toggle").forEach(t => {
+      const id = t.getAttribute("data-chart-id");
+      if (id) {
+        chartSelections[id] = !!t.checked;
+      }
+    });
+
+    const tableVarSelections = {};
+    document.querySelectorAll(".table-var-checkbox").forEach(cb => {
+      const id = cb.getAttribute("data-var-id");
+      if (id) {
+        tableVarSelections[id] = !!cb.checked;
+      }
+    });
+
+    const colorCodeCheckbox = document.getElementById("color-code-headers");
+    const colorCodeHeadersState = !!(colorCodeCheckbox && colorCodeCheckbox.checked);
+
+    const uiState = {
+      charts: chartSelections,
+      tableVars: tableVarSelections,
+      colorCodeHeaders: colorCodeHeadersState
+    };
 
     // Prepare data to embed
     const exportScenarios = currentScenarios.map(s => ({
@@ -971,14 +1029,11 @@
     }));
     const ranges = getRangeConfig();
 
-    // Serialize current document HTML
-    const htmlNode = document.documentElement;
-    let docHtml = htmlNode.outerHTML;
-
-    // Safely stringify data for injection inside a <script>
     const exportScenariosJson = JSON.stringify(exportScenarios).replace(/<\/script/gi, "<\\/script");
     const exportRangesJson = JSON.stringify(ranges).replace(/<\/script/gi, "<\\/script");
     const exportSummaryFreqJson = JSON.stringify(summaryFrequency);
+    const exportUIStateJson = JSON.stringify(uiState).replace(/<\/script/gi, "<\\/script");
+    const exportFixedJson = JSON.stringify(!!exportFixed);
 
     const injectionScript = `
 <script>
@@ -986,6 +1041,8 @@
   window.__EXPORTED_SCENARIOS = ${exportScenariosJson};
   window.__EXPORTED_RANGES = ${exportRangesJson};
   window.__EXPORTED_SUMMARY_FREQUENCY = ${exportSummaryFreqJson};
+  window.__EXPORTED_UI_STATE = ${exportUIStateJson};
+  window.__EXPORTED_FIXED = ${exportFixedJson};
   document.addEventListener("DOMContentLoaded", function(){
     if (!window.__EXPORTED_SCENARIOS || !window.__EXPORTED_SCENARIOS.length) return;
     currentScenarios = window.__EXPORTED_SCENARIOS;
@@ -1002,6 +1059,32 @@
         actualMinInput.disabled = true;
       }
     }
+
+    if (typeof window.__EXPORTED_UI_STATE === "object" && window.__EXPORTED_UI_STATE) {
+      var ui = window.__EXPORTED_UI_STATE;
+      var chartState = ui.charts || {};
+      document.querySelectorAll(".chart-toggle").forEach(function(t) {
+        var id = t.getAttribute("data-chart-id");
+        if (id && Object.prototype.hasOwnProperty.call(chartState, id)) {
+          t.checked = !!chartState[id];
+        }
+      });
+
+      var varState = ui.tableVars || {};
+      document.querySelectorAll(".table-var-checkbox").forEach(function(cb) {
+        var id = cb.getAttribute("data-var-id");
+        if (id && Object.prototype.hasOwnProperty.call(varState, id)) {
+          cb.checked = !!varState[id];
+        }
+      });
+
+      if (typeof ui.colorCodeHeaders === "boolean") {
+        var cc = document.getElementById("color-code-headers");
+        colorCodeTableHeaders = ui.colorCodeHeaders;
+        if (cc) cc.checked = colorCodeTableHeaders;
+      }
+    }
+
     if (typeof window.__EXPORTED_SUMMARY_FREQUENCY === "string") {
       summaryFrequency = window.__EXPORTED_SUMMARY_FREQUENCY;
       var radios = document.querySelectorAll(".table-frequency-radio");
@@ -1019,12 +1102,44 @@
       var n = currentScenarios.length;
       scenarioCountLbl.textContent = n + " scenario" + (n > 1 ? "s" : "") + " loaded";
     }
+
+    var downloadWrap = document.getElementById("download-wrapper");
+    if (downloadWrap) downloadWrap.style.display = "none";
+
+    var ledeEl = document.querySelector(".lede");
+    if (ledeEl) {
+      ledeEl.style.display = "none";
+    }
+
+    if (window.__EXPORTED_FIXED) {
+      if (rangeConfigEl) {
+        rangeConfigEl.style.display = "none";
+      }
+      var chartToggleRow = document.getElementById("chart-toggle-row");
+      if (chartToggleRow) {
+        chartToggleRow.style.display = "none";
+      }
+      var summaryVarControls = document.getElementById("summary-var-controls");
+      if (summaryVarControls) {
+        summaryVarControls.style.display = "none";
+      }
+      var summaryColorToggle = document.getElementById("summary-color-toggle");
+      if (summaryColorToggle) {
+        summaryColorToggle.style.display = "none";
+      }
+    }
+
     renderDashboard(currentScenarios);
+    if (typeof applyChartVisibility === "function") {
+      applyChartVisibility();
+    }
   });
 })();
 <\/script>
 `;
 
+    const htmlNode = document.documentElement;
+    let docHtml = htmlNode.outerHTML;
     const closingTag = '</body>';
     const idx = docHtml.lastIndexOf(closingTag);
     let finalHtml;
@@ -1035,7 +1150,6 @@
         injectionScript +
         docHtml.slice(idx);
     } else {
-      // Fallback: if for some reason </body> is not found, just append the script
       finalHtml = '<!doctype html>\n' + docHtml + injectionScript;
     }
 
