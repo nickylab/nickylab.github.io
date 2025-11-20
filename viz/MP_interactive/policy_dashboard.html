@@ -294,7 +294,7 @@
           Actual data range (shaded)
         </label>
         <div class="range-row">
-          <select id="actual-min" class="range-input"></select>
+          <select id="actual-min" class="range-input" disabled></select>
           <span class="range-sep">to</span>
           <select id="actual-max" class="range-input"></select>
         </div>
@@ -505,7 +505,7 @@
     return {
       plotMin: (plotMinInput && plotMinInput.value) || defaultPlotMin,
       plotMax: (plotMaxInput && plotMaxInput.value) || defaultPlotMax,
-      actualMin: (actualMinInput && actualMinInput.value) || defaultActualMin,
+      actualMin: (plotMinInput && plotMinInput.value) || defaultPlotMin,
       actualMax: (actualMaxInput && actualMaxInput.value) || defaultActualMax,
       tableMin: (tableMinInput && tableMinInput.value) || defaultTableMin,
       tableMax: (tableMaxInput && tableMaxInput.value) || defaultTableMax
@@ -565,6 +565,12 @@
     populateSelectFromPeriods(actualMaxInput, defaultActualMax, true);
     populateSelectFromPeriods(tableMinInput, defaultTableMin, false);
     populateSelectFromPeriods(tableMaxInput, defaultTableMax, true);
+
+    // Keep actual-min aligned with plot-min and non-editable
+    if (plotMinInput && actualMinInput) {
+      actualMinInput.value = plotMinInput.value;
+      actualMinInput.disabled = true;
+    }
   }
 
   function refreshAvailablePeriodsAndSelects() {
@@ -786,8 +792,37 @@
 
   [plotMinInput, plotMaxInput, actualMinInput, actualMaxInput, tableMinInput, tableMaxInput].forEach(el => {
     if (!el) return;
-    el.addEventListener("change", reRenderIfReady);
+    el.addEventListener("change", () => {
+      // Keep actual-min locked to plot-min
+      if (el === plotMinInput && actualMinInput) {
+        actualMinInput.value = plotMinInput.value;
+      }
+      reRenderIfReady();
+    });
   });
+  // Helper for actual data shading (shaded region from plotMin to actualMax)
+  function buildActualDataShading(ranges) {
+    const shadeMin = ranges.plotMin;
+    const shadeMax = ranges.actualMax;
+    const minIdx = parsePeriodToIndex(shadeMin);
+    const maxIdx = parsePeriodToIndex(shadeMax);
+    if (minIdx == null || maxIdx == null || minIdx > maxIdx) {
+      return [];
+    }
+    return [
+      {
+        type: "rect",
+        xref: "x",
+        yref: "paper",
+        x0: shadeMin,
+        x1: shadeMax,
+        y0: 0,
+        y1: 1,
+        fillcolor: "rgba(15,23,42,0.08)",
+        line: { width: 0 }
+      }
+    ];
+  }
 
   // Chart visibility toggles
   function applyChartVisibility() {
@@ -925,19 +960,7 @@
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-policy", traces, layout, { responsive: true });
   }
@@ -966,19 +989,7 @@
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-policy-step", traces, layout, { responsive: true });
   }
@@ -1003,19 +1014,7 @@
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-output-gap", traces, layout, { responsive: true });
   }
@@ -1058,19 +1057,7 @@
       xaxis: { title: "Period" },
       yaxis: { title: "Level (ln × 100)" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-output-levels", traces, layout, { responsive: true });
   }
@@ -1094,19 +1081,7 @@
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-headline-yoy", traces, layout, { responsive: true });
   }
@@ -1130,19 +1105,7 @@
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-core-yoy", traces, layout, { responsive: true });
   }
@@ -1166,19 +1129,7 @@
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-potential-growth", traces, layout, { responsive: true });
   }
@@ -1202,19 +1153,7 @@
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-core-qoq", traces, layout, { responsive: true });
   }
@@ -1238,19 +1177,7 @@
       xaxis: { title: "Period" },
       yaxis: { title: "Percent", tickformat: ".2f" },
       showlegend: false,
-      shapes: [
-        {
-          type: "rect",
-          xref: "x",
-          yref: "paper",
-          x0: ranges.actualMin,
-          x1: ranges.actualMax,
-          y0: 0,
-          y1: 1,
-          fillcolor: "rgba(15,23,42,0.08)",
-          line: { width: 0 }
-        }
-      ]
+      shapes: buildActualDataShading(ranges)
     };
     Plotly.newPlot("chart-headline-qoq", traces, layout, { responsive: true });
   }
