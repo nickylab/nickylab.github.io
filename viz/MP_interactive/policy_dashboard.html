@@ -9,6 +9,10 @@
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <!-- PapaParse for CSV parsing -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- jsPDF + svg2pdf for vector PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highstock/6.0.3/lib/svg2pdf.js"></script>
 
   <style>
     :root {
@@ -344,15 +348,16 @@
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
         <h2 style="margin:0;">Interactive dashboard</h2>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="pill" id="scenario-count-label"></span>
-          <div id="download-wrapper" class="download-wrapper">
+        <span class="pill" id="scenario-count-label"></span>
+        <div id="download-wrapper" class="download-wrapper">
             <button id="download-toggle" class="btn btn-primary">Download dashboard (.html)</button>
             <div id="download-menu" class="download-menu">
-              <button type="button" data-export-mode="interactive">Interactive</button>
-              <button type="button" data-export-mode="fixed">Snapshot</button>
+            <button type="button" data-export-mode="interactive">Interactive</button>
+            <button type="button" data-export-mode="fixed">Snapshot</button>
             </div>
-          </div>
-          <button id="back-to-config" class="btn btn-ghost">Back to file selection</button>
+        </div>
+        <button id="download-pdf" class="btn btn-ghost" onclick="downloadPdfSnapshot()">Download PDF</button>
+        <button id="back-to-config" class="btn btn-ghost">Back to file selection</button>
         </div>
       </div>
     </div>
@@ -644,10 +649,11 @@
   const dashboardStepEl  = document.getElementById("dashboard-step");
   const backToConfigBtn  = document.getElementById("back-to-config");
   const scenarioCountLbl = document.getElementById("scenario-count-label");
-  const downloadWrapperEl      = document.getElementById("download-wrapper");
-  const downloadToggleBtn      = document.getElementById("download-toggle");
-  const downloadMenuEl         = document.getElementById("download-menu");
-  const summaryTablesEl  = document.getElementById("summary-tables");
+    const downloadWrapperEl      = document.getElementById("download-wrapper");
+    const downloadPdfBtn         = document.getElementById("download-pdf");
+    const downloadToggleBtn      = document.getElementById("download-toggle");
+    const downloadMenuEl         = document.getElementById("download-menu");
+    const summaryTablesEl  = document.getElementById("summary-tables");
   const rangeConfigEl    = document.getElementById("range-config");
   const scenarioLegendEl = document.getElementById("scenario-legend");
   const summaryLegendEl  = document.getElementById("summary-legend");
@@ -1189,6 +1195,512 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
+
+
+
+
+  // PDF chart pack: draw vector charts directly with jsPDF (no Plotly images)
+  window.downloadPdfSnapshot = async function() {
+    // alert("Starting PDF export...");
+    console.log("[MPC] PDF export started");
+
+    try {
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert("jsPDF is not loaded. Please check the script imports.");
+        return;
+      }
+
+      if (!currentScenarios || !currentScenarios.length) {
+        alert("Please load a scenario before exporting.");
+        return;
+      }
+
+      const tableEl = document.querySelector("#summary-tables table");
+      if (!tableEl) {
+        alert("Summary table not found. Please refresh the page.");
+        return;
+      }
+
+      const bodyRows = tableEl.querySelectorAll("tbody tr");
+      const maxRowsOnePage = 32;
+      if (bodyRows.length > maxRowsOnePage) {
+        const proceed = confirm(
+          "The summary table has " +
+            bodyRows.length +
+            " rows, so the PDF will use multiple pages. Continue?"
+        );
+        if (!proceed) return;
+      }
+
+      const ranges = getRangeConfig();
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a3" });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 40;
+
+      // Title
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(20);
+      pdf.text("Policy Rate Projection Dashboard", margin, margin);
+
+      // Area allocations
+      // Use the same front-to-back ordering as the HTML charts
+      const orderedScenariosForPdf = [...currentScenarios].reverse();
+
+      const chartsAreaTop = margin + 40;  // leave space under the title for the legend
+      const usableHeight = pageHeight - margin * 2;
+      const chartsAreaHeight = usableHeight * 0.6;   // 60% for charts
+      const tableTop = chartsAreaTop + chartsAreaHeight + 30; // remaining ~40% for table
+
+      // Global legend (same colors as HTML legend)
+      const legendY = margin + 18;
+      let legendX = margin;
+      const legendGapX = 14;
+      const legendItemGap = 40;
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      orderedScenariosForPdf.forEach(s => {
+        const label = s.name || "Scenario";
+        const swatchWidth = 14;
+        const swatchHeight = 6;
+        const labelWidth = pdf.getTextWidth(label);
+        const itemWidth = swatchWidth + 6 + labelWidth;
+
+        if (legendX + itemWidth > pageWidth - margin) {
+          legendX = margin;
+        }
+
+        const rgb = hexToRgb(s.color);
+        pdf.setFillColor(rgb.r, rgb.g, rgb.b);
+        pdf.rect(legendX, legendY - swatchHeight + 2, swatchWidth, swatchHeight, "F");
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(label, legendX + swatchWidth + 6, legendY);
+
+        legendX += itemWidth + legendItemGap;
+      });
+
+      const chartsLeft = margin;
+      const chartsRight = pageWidth - margin;
+      const chartsWidth = chartsRight - chartsLeft;
+
+      // Use a 3x2 grid for up to 6 charts, fixed chart size
+      const chartCols = 3;
+      const chartRows = 2; // 3x2 grid for up to 6 charts
+      const hGap = 24;
+      const vGap = 24;
+      const chartWidth = (chartsWidth - hGap * (chartCols - 1)) / chartCols;
+      const chartHeight = (chartsAreaHeight - vGap * (chartRows - 1)) / chartRows;
+
+      const selectedChartIds = Array.from(
+        document.querySelectorAll(".chart-toggle")
+      )
+        .filter(cb => cb.checked)
+        .map(cb => cb.dataset.chartId)
+        .slice(0, 6);
+
+      if (!selectedChartIds.length) {
+        alert("Please select at least one chart to include in the Chart Pack.");
+        return;
+      }
+
+      const chartMeta = {
+        "chart-policy": {
+          title: "Policy Rate (%)",
+          yLabel: "%",
+          buildSeries: scenario => buildSingleSeriesForColumn(scenario, "i", ranges)
+        },
+        "chart-output-gap": {
+          title: "Output Gap (%)",
+          yLabel: "%",
+          buildSeries: scenario => buildSingleSeriesForColumn(scenario, "ygap", ranges)
+        },
+        "chart-headline-yoy": {
+          title: "Headline Inflation (%YoY)",
+          yLabel: "%YoY",
+          buildSeries: scenario => buildSingleSeriesForColumn(scenario, "picpi4", ranges)
+        },
+        "chart-core-yoy": {
+          title: "Core Inflation (%YoY)",
+          yLabel: "%YoY",
+          buildSeries: scenario => buildSingleSeriesForColumn(scenario, "pi4", ranges)
+        },
+        "chart-headline-qoq": {
+          title: "Headline Inflation (%QoQ ann.)",
+          yLabel: "%QoQ",
+          buildSeries: scenario => buildSingleSeriesForColumn(scenario, "picpi", ranges)
+        },
+        "chart-core-qoq": {
+          title: "Core Inflation (%QoQ ann.)",
+          yLabel: "%QoQ",
+          buildSeries: scenario => buildSingleSeriesForColumn(scenario, "pi", ranges)
+        },
+        "chart-potential-growth": {
+          title: "Potential Growth (%)",
+          yLabel: "%",
+          buildSeries: scenario => buildSingleSeriesForColumn(scenario, "dytrnd", ranges)
+        },
+        "chart-output-levels": {
+          title: "Output and Potential (log level)",
+          yLabel: "log-level",
+          buildSeries: scenario => {
+            const sY = getSeries(scenario, "y", ranges.plotMin, ranges.plotMax);
+            const sTrend = getSeries(scenario, "ytrnd", ranges.plotMin, ranges.plotMax);
+            const out = [];
+            if (sY.x.length) {
+              out.push({
+                name: scenario.name + " Output",
+                color: scenario.color,
+                kind: "output",
+                x: sY.x.slice(),
+                y: sY.y.map(v => (typeof v === "number" && v > 0 ? Math.log(v) * 100 : null))
+              });
+            }
+            if (sTrend.x.length) {
+              out.push({
+                name: scenario.name + " Potential",
+                color: scenario.color,
+                kind: "potential",
+                x: sTrend.x.slice(),
+                y: sTrend.y.map(v => (typeof v === "number" && v > 0 ? Math.log(v) * 100 : null))
+              });
+            }
+            return out;
+          }
+        },
+        "chart-policy-step": {
+          title: "Policy Rate (0.25 steps)",
+          yLabel: "%",
+          buildSeries: scenario => {
+            const s = getSeries(scenario, "i", ranges.plotMin, ranges.plotMax);
+            const stepped = s.y.map(v =>
+              typeof v === "number" ? Math.round(v * 4) / 4 : null
+            );
+            return [
+              {
+                name: scenario.name,
+                color: scenario.color,
+                kind: "output",
+                x: s.x.slice(),
+                y: stepped
+              }
+            ];
+          }
+        }
+      };
+
+      function buildSingleSeriesForColumn(scenario, col, r) {
+        const s = getSeries(scenario, col, r.plotMin, r.plotMax);
+        return [
+          {
+            name: scenario.name,
+            color: scenario.color,
+            kind: "output",
+            x: s.x.slice(),
+            y: s.y.slice()
+          }
+        ];
+      }
+
+      function toIndexedSeries(seriesList) {
+        const processed = [];
+        let minIdx = Infinity;
+        let maxIdx = -Infinity;
+        let minY = Infinity;
+        let maxY = -Infinity;
+
+        seriesList.forEach(s => {
+          const pts = [];
+          for (let i = 0; i < s.x.length; i++) {
+            const period = s.x[i];
+            const yVal = s.y[i];
+            if (typeof yVal !== "number" || !isFinite(yVal)) continue;
+            if (!periodInRange(period, ranges.plotMin, ranges.plotMax)) continue;
+            const idx = parsePeriodToIndex(period);
+            if (idx == null) continue;
+            pts.push({ idx, y: yVal });
+            if (idx < minIdx) minIdx = idx;
+            if (idx > maxIdx) maxIdx = idx;
+            if (yVal < minY) minY = yVal;
+            if (yVal > maxY) maxY = yVal;
+          }
+          if (pts.length) {
+            processed.push({
+              name: s.name,
+              color: s.color,
+              kind: s.kind || "output",
+              points: pts
+            });
+          }
+        });
+
+        if (!processed.length) return null;
+
+        if (minY === maxY) {
+          minY -= 1;
+          maxY += 1;
+        }
+        const yPad = (maxY - minY) * 0.08;
+        minY -= yPad;
+        maxY += yPad;
+
+        return { series: processed, minIdx, maxIdx, minY, maxY };
+      }
+
+      function idxToYear(idx) {
+        // keep it simple for now; this is cosmetic, not critical
+        return Math.floor(idx / 4);
+      }
+
+      function drawSingleChart(chartId, colIndex, rowIndex) {
+        const meta = chartMeta[chartId];
+        if (!meta) return;
+
+        let allSeries = [];
+        orderedScenariosForPdf.forEach(scenario => {
+          const seriesForScenario = meta.buildSeries(scenario) || [];
+          allSeries = allSeries.concat(seriesForScenario);
+        });
+
+        const indexed = toIndexedSeries(allSeries);
+        if (!indexed) return;
+
+        const cellX = chartsLeft + colIndex * (chartWidth + hGap);
+        const cellY = chartsAreaTop + rowIndex * (chartHeight + vGap);
+
+        // Chart title: bigger, centered
+        const titleY = cellY + 16;
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(13);
+        pdf.text(meta.title, cellX + chartWidth / 2, titleY, { align: "center" });
+
+        const plotLeft = cellX + 40;
+        const plotRight = cellX + chartWidth - 10;
+        const plotTop = cellY + 24;
+        const plotBottom = cellY + chartHeight - 24;
+
+        // Shaded actual-data range (same logic as HTML charts)
+        const shadeMin = ranges.plotMin;
+        const shadeMax = ranges.actualMax;
+        const shadeMinIdx = parsePeriodToIndex(shadeMin);
+        const shadeMaxIdx = parsePeriodToIndex(shadeMax);
+        if (shadeMinIdx != null && shadeMaxIdx != null && shadeMaxIdx > shadeMinIdx) {
+          const x0Idx = Math.max(shadeMinIdx, indexed.minIdx);
+          const x1Idx = Math.min(shadeMaxIdx, indexed.maxIdx);
+          if (x1Idx > x0Idx) {
+            const x0 = plotLeft + ((x0Idx - indexed.minIdx) / Math.max(indexed.maxIdx - indexed.minIdx, 1)) * (plotRight - plotLeft);
+            const x1 = plotLeft + ((x1Idx - indexed.minIdx) / Math.max(indexed.maxIdx - indexed.minIdx, 1)) * (plotRight - plotLeft);
+            pdf.setFillColor(245, 248, 252); // light background
+            pdf.rect(x0, plotTop, x1 - x0, plotBottom - plotTop, "F");
+          }
+        }
+
+        pdf.setLineWidth(0.8);
+        pdf.setDrawColor(0, 0, 0);
+        pdf.line(plotLeft, plotTop, plotLeft, plotBottom);
+        pdf.line(plotLeft, plotBottom, plotRight, plotBottom);
+
+        const xRange = Math.max(indexed.maxIdx - indexed.minIdx, 1);
+        const yRange = Math.max(indexed.maxY - indexed.minY, 1);
+
+        // Faint grid color
+        const gridColor = { r: 230, g: 234, b: 242 };
+
+        // Horizontal gridlines and y-axis ticks
+        const yTicks = 4;
+        pdf.setFont("helvetica", "normal");
+        for (let i = 0; i <= yTicks; i++) {
+          const val = indexed.minY + (yRange * i) / yTicks;
+          const yPos = plotBottom - ((val - indexed.minY) / yRange) * (plotBottom - plotTop);
+          pdf.setDrawColor(gridColor.r, gridColor.g, gridColor.b);
+          pdf.setLineWidth(0.3);
+          pdf.line(plotLeft, yPos, plotRight, yPos);
+          pdf.setDrawColor(0, 0, 0);
+          pdf.setLineWidth(0.8);
+          pdf.setFontSize(9);
+          pdf.text(val.toFixed(1), plotLeft - 4, yPos + 2, { align: "right" });
+        }
+
+        // Vertical gridlines and x-axis ticks/labels
+        const firstYear = idxToYear(indexed.minIdx);
+        const lastYear = idxToYear(indexed.maxIdx);
+        const yearSpan = Math.max(lastYear - firstYear, 1);
+        const yearStep = yearSpan > 8 ? 2 : 1;
+
+        for (let y = firstYear; y <= lastYear; y += yearStep) {
+          const idxForYear = y * 4 + 1;
+          const xPos =
+            plotLeft + ((idxForYear - indexed.minIdx) / xRange) * (plotRight - plotLeft);
+          if (xPos < plotLeft - 5 || xPos > plotRight + 5) continue;
+          pdf.setDrawColor(gridColor.r, gridColor.g, gridColor.b);
+          pdf.setLineWidth(0.3);
+          pdf.line(xPos, plotTop, xPos, plotBottom);
+          pdf.setDrawColor(0, 0, 0);
+          pdf.setLineWidth(0.8);
+          pdf.line(xPos, plotBottom, xPos, plotBottom - 4);
+          pdf.setFontSize(9);
+          pdf.text(String(y), xPos, plotBottom + 10, { align: "center" });
+        }
+
+        // Series lines and markers (thicker; dotted for potential series)
+        indexed.series.forEach(s => {
+          const rgb = hexToRgb(s.color);
+          pdf.setDrawColor(rgb.r, rgb.g, rgb.b);
+          pdf.setFillColor(rgb.r, rgb.g, rgb.b);
+          pdf.setLineWidth(2.0);
+
+          // Solid for output, dotted for potential
+          const isPotential = s.kind === "potential";
+          if (typeof pdf.setLineDash === "function") {
+            if (isPotential) {
+              pdf.setLineDash([3, 3], 0);
+            } else {
+              pdf.setLineDash([], 0);
+            }
+          }
+
+          const pts = s.points;
+          for (let i = 1; i < pts.length; i++) {
+            const p0 = pts[i - 1];
+            const p1 = pts[i];
+            const x0 =
+              plotLeft + ((p0.idx - indexed.minIdx) / xRange) * (plotRight - plotLeft);
+            const x1 =
+              plotLeft + ((p1.idx - indexed.minIdx) / xRange) * (plotRight - plotLeft);
+            const y0 =
+              plotBottom - ((p0.y - indexed.minY) / yRange) * (plotBottom - plotTop);
+            const y1 =
+              plotBottom - ((p1.y - indexed.minY) / yRange) * (plotBottom - plotTop);
+            pdf.line(x0, y0, x1, y1);
+          }
+
+          // Markers for both output and potential
+          pts.forEach(p => {
+            const x = plotLeft + ((p.idx - indexed.minIdx) / xRange) * (plotRight - plotLeft);
+            const y =
+              plotBottom - ((p.y - indexed.minY) / yRange) * (plotBottom - plotTop);
+            pdf.circle(x, y, 2.4, "F");
+          });
+
+          // Reset dash after each series
+          if (typeof pdf.setLineDash === "function") {
+            pdf.setLineDash([], 0);
+          }
+        });
+
+        // y-axis label, slightly larger font
+        if (meta.yLabel) {
+          const yLabelX = cellX + 12;
+          const yLabelY = (plotTop + plotBottom) / 2;
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(9);
+          pdf.text(meta.yLabel, yLabelX, yLabelY, {
+            angle: 90,
+            align: "center"
+          });
+        }
+      }
+
+      selectedChartIds.forEach((chartId, idx) => {
+        const row = Math.floor(idx / chartCols);
+        const col = idx % chartCols;
+        if (row < chartRows) {
+          drawSingleChart(chartId, col, row);
+        }
+      });
+
+      const autoTable = pdf.autoTable;
+      if (!autoTable) {
+        alert("jsPDF autoTable plugin is not loaded. Please check the script imports.");
+        return;
+      }
+
+      autoTable.call(pdf, {
+        html: tableEl,
+        startY: tableTop,
+        theme: "grid",
+        tableWidth: "auto",
+        margin: { top: tableTop, left: margin, right: margin },
+        styles: {
+          font: "helvetica",
+          fontSize: 10,
+          cellPadding: 3,
+          lineWidth: 0.1,
+          halign: "center",
+          valign: "middle"
+        },
+        headStyles: (colorCodeTableHeaders ? {
+          fillColor: [248, 250, 252],
+          lineWidth: 0.1,
+          halign: "center",
+          valign: "middle"
+        } : {
+          fillColor: [248, 250, 252],
+          textColor: 0,
+          lineWidth: 0.1,
+          halign: "center",
+          valign: "middle"
+        }),
+        didParseCell: function (data) {
+          // If color-coding is enabled, color the second header row (scenario names)
+          if (colorCodeTableHeaders && data.section === "head" && data.row.index === 1) {
+            const scenarioName = String(data.cell.text || "").trim();
+            const match = currentScenarios.find(s => s.name === scenarioName);
+            if (match && match.color) {
+              const rgb = hexToRgb(match.color);
+              data.cell.styles.textColor = [rgb.r, rgb.g, rgb.b];
+            }
+          }
+        },
+        didDrawPage: data => {
+          const footerText =
+            "Exported on " +
+            new Date().toLocaleString("en-US", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit"
+            });
+          pdf.setFontSize(8);
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(
+            footerText,
+            margin,
+            pdf.internal.pageSize.getHeight() - 12
+          );
+        }
+      });
+
+      const firstScenarioName = currentScenarios[0]?.name || "Scenario";
+      pdf.save(firstScenarioName + "_chart_pack.pdf");
+    } catch (err) {
+      console.error("PDF export error:", err);
+      alert("PDF export failed: " + (err && err.message ? err.message : err));
+    }
+  };
+
+
+
+
+// Helper: convert hex color to RGB for PDF chart drawing
+function hexToRgb(hex) {
+  if (!hex) return { r: 0, g: 0, b: 0 };
+  let c = String(hex).trim();
+  if (c[0] === "#") c = c.slice(1);
+  if (c.length === 3) {
+    c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
+  }
+  const num = parseInt(c, 16);
+  if (isNaN(num)) return { r: 0, g: 0, b: 0 };
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255
+  };
+}
+
   function reRenderIfReady() {
     if (dashboardStepEl.style.display !== "none" && currentScenarios && currentScenarios.length) {
       renderDashboard(currentScenarios);
