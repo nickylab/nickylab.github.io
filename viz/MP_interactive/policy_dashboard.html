@@ -267,6 +267,18 @@
     .download-menu.open{opacity:1;transform:translateY(0);pointer-events:auto;}
     .download-menu button{width:100%;text-align:left;border:none;background:transparent;padding:6px 8px;border-radius:6px;font-size:12px;cursor:pointer;}
     .download-menu button:hover{background:#eff6ff;}
+    .download-submenu{
+      margin-top:4px;
+      padding-left:12px;
+      border-top:1px solid var(--border);
+      display:none;
+    }
+    .download-submenu.open{
+      display:block;
+    }
+    .download-submenu button{
+      font-size:11px;
+    }
   </style>
 </head>
 <body>
@@ -350,13 +362,16 @@
         <div style="display:flex;align-items:center;gap:8px;">
         <span class="pill" id="scenario-count-label"></span>
         <div id="download-wrapper" class="download-wrapper">
-            <button id="download-toggle" class="btn btn-primary">Download dashboard (.html)</button>
-            <div id="download-menu" class="download-menu">
-            <button type="button" data-export-mode="interactive">Interactive</button>
-            <button type="button" data-export-mode="fixed">Snapshot</button>
+          <button id="download-toggle" class="btn btn-primary">Download</button>
+          <div id="download-menu" class="download-menu">
+            <button type="button" id="download-html-parent">As HTML ▸</button>
+            <div id="download-html-submenu" class="download-submenu">
+              <button type="button" data-download="html-interactive">Interactive</button>
+              <button type="button" data-download="html-fixed">Snapshot</button>
             </div>
+            <button type="button" data-download="pdf">As PDF</button>
+          </div>
         </div>
-        <button id="download-pdf" class="btn btn-ghost" onclick="downloadPdfSnapshot()">Download PDF</button>
         <button id="back-to-config" class="btn btn-ghost">Back to file selection</button>
         </div>
       </div>
@@ -492,6 +507,12 @@
   let currentScenarios = [];
   let colorCodeTableHeaders = false;
     let summaryFrequency = "quarterly"; // "quarterly" or "yearly"
+
+    // Approximate row budgets for a single-page PDF table with current layout.
+    // Yearly view: about 10–11 years fit comfortably on one page.
+    // Quarterly view: about 40 quarters (~10 years) fit comfortably on one page.
+    const MAX_TABLE_ROWS_PER_PAGE_YEARLY = 14;
+    const MAX_TABLE_ROWS_PER_PAGE_QUARTERLY = 14;
 
   const tableVarConfig = {
     ygap: {
@@ -650,10 +671,11 @@
   const backToConfigBtn  = document.getElementById("back-to-config");
   const scenarioCountLbl = document.getElementById("scenario-count-label");
     const downloadWrapperEl      = document.getElementById("download-wrapper");
-    const downloadPdfBtn         = document.getElementById("download-pdf");
     const downloadToggleBtn      = document.getElementById("download-toggle");
     const downloadMenuEl         = document.getElementById("download-menu");
-    const summaryTablesEl  = document.getElementById("summary-tables");
+    const downloadHtmlParentBtn  = document.getElementById("download-html-parent");
+    const downloadHtmlSubmenuEl  = document.getElementById("download-html-submenu");
+    const summaryTablesEl        = document.getElementById("summary-tables");
   const rangeConfigEl    = document.getElementById("range-config");
   const scenarioLegendEl = document.getElementById("scenario-legend");
   const summaryLegendEl  = document.getElementById("summary-legend");
@@ -998,14 +1020,33 @@
   if (downloadToggleBtn && downloadMenuEl) {
     downloadToggleBtn.addEventListener("click", () => {
       downloadMenuEl.classList.toggle("open");
+      if (downloadHtmlSubmenuEl) {
+        downloadHtmlSubmenuEl.classList.remove("open");
+      }
     });
 
-    downloadMenuEl.querySelectorAll("button[data-export-mode]").forEach(btn => {
+    if (downloadHtmlParentBtn && downloadHtmlSubmenuEl) {
+      downloadHtmlParentBtn.addEventListener("click", (evt) => {
+        evt.stopPropagation();
+        downloadHtmlSubmenuEl.classList.toggle("open");
+      });
+    }
+
+    downloadMenuEl.querySelectorAll("button[data-download]").forEach(btn => {
       btn.addEventListener("click", () => {
-        const mode = btn.getAttribute("data-export-mode");
-        const exportFixed = (mode === "fixed");
+        const action = btn.getAttribute("data-download");
         downloadMenuEl.classList.remove("open");
-        downloadStandaloneDashboard(exportFixed);
+        if (downloadHtmlSubmenuEl) {
+          downloadHtmlSubmenuEl.classList.remove("open");
+        }
+
+        if (action === "html-interactive") {
+          downloadStandaloneDashboard(false);
+        } else if (action === "html-fixed") {
+          downloadStandaloneDashboard(true);
+        } else if (action === "pdf") {
+          handlePdfDownloadClick();
+        }
       });
     });
 
@@ -1013,6 +1054,9 @@
       if (!downloadWrapperEl) return;
       if (!downloadWrapperEl.contains(evt.target)) {
         downloadMenuEl.classList.remove("open");
+        if (downloadHtmlSubmenuEl) {
+          downloadHtmlSubmenuEl.classList.remove("open");
+        }
       }
     });
   }
@@ -1198,6 +1242,76 @@
 
 
 
+  function estimateTableRowCountForPdf() {
+    // Look at the actual rendered summary table so we match what autoTable sees
+    const tableEl = document.querySelector("#summary-tables table");
+    if (!tableEl) return null;
+    const tbody = tableEl.querySelector("tbody");
+    if (!tbody) return null;
+    return tbody.querySelectorAll("tr").length;
+  }
+
+function suggestMaxTableMax(ranges) {
+  const isYearly = (summaryFrequency === "yearly");
+
+  if (isYearly) {
+    const minParts = parsePeriodParts(ranges.tableMin);
+    if (!minParts) return null;
+    const rowLimit = MAX_TABLE_ROWS_PER_PAGE_YEARLY;
+    const suggestedLastYear = minParts.year + rowLimit - 1;
+    // table uses quarterly labels, suggest Q4 of that year
+    return suggestedLastYear + "Q4";
+  } else {
+    const minIdx = parsePeriodToIndex(ranges.tableMin);
+    if (minIdx == null) return null;
+    const rowLimit = MAX_TABLE_ROWS_PER_PAGE_QUARTERLY;
+    const suggestedIdx = minIdx + rowLimit - 1;
+    return indexToPeriod(suggestedIdx);
+  }
+}
+
+function handlePdfDownloadClick() {
+  if (!currentScenarios || !currentScenarios.length) {
+    alert("Please build the dashboard before exporting.");
+    return;
+  }
+
+  const ranges = getRangeConfig();
+  const estimatedRows = estimateTableRowCountForPdf();
+  const isYearly = (summaryFrequency === "yearly");
+  const rowLimit = isYearly ? MAX_TABLE_ROWS_PER_PAGE_YEARLY : MAX_TABLE_ROWS_PER_PAGE_QUARTERLY;
+
+  if (estimatedRows && estimatedRows > rowLimit) {
+    const suggestionPeriod = suggestMaxTableMax(ranges);
+
+    let msg =
+      "The current table range will produce about " +
+      estimatedRows +
+      (isYearly ? " years" : " quarters") +
+      " in the summary table, so the PDF table will spill onto multiple pages.\n\n";
+
+    if (suggestionPeriod) {
+      msg +=
+        "For a single-page table, try ending the table range around " +
+        suggestionPeriod +
+        " (about " +
+        rowLimit +
+        (isYearly ? " years" : " quarters") +
+        " from the starting point).\n\n";
+    }
+
+    msg += "Do you still want to continue with the current range?";
+
+    const proceed = confirm(msg);
+    if (!proceed) return;
+  }
+
+  // If row count is fine, or user confirms, proceed with actual export
+  downloadPdfSnapshot();
+}
+
+
+
 
   // PDF chart pack: draw vector charts directly with jsPDF (no Plotly images)
   window.downloadPdfSnapshot = async function() {
@@ -1221,16 +1335,6 @@
         return;
       }
 
-      const bodyRows = tableEl.querySelectorAll("tbody tr");
-      const maxRowsOnePage = 32;
-      if (bodyRows.length > maxRowsOnePage) {
-        const proceed = confirm(
-          "The summary table has " +
-            bodyRows.length +
-            " rows, so the PDF will use multiple pages. Continue?"
-        );
-        if (!proceed) return;
-      }
 
       const ranges = getRangeConfig();
       const { jsPDF } = window.jspdf;
@@ -1238,7 +1342,7 @@
 
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 40;
+      const margin = 30;
 
       // Title
       pdf.setFont("helvetica", "bold");
@@ -1251,8 +1355,8 @@
 
       const chartsAreaTop = margin + 40;  // leave space under the title for the legend
       const usableHeight = pageHeight - margin * 2;
-      const chartsAreaHeight = usableHeight * 0.6;   // 60% for charts
-      const tableTop = chartsAreaTop + chartsAreaHeight + 30; // remaining ~40% for table
+      const chartsAreaHeight = usableHeight * 0.55;   // 55% for charts
+      const tableTop = chartsAreaTop + chartsAreaHeight + 10; // remaining ~40% for table
 
       // Global legend (same colors as HTML legend)
       const legendY = margin + 18;
@@ -1289,9 +1393,9 @@
       const chartCols = 3;
       const chartRows = 2; // 3x2 grid for up to 6 charts
       const hGap = 24;
-      const vGap = 24;
+      const vGap = 8;
       const chartWidth = (chartsWidth - hGap * (chartCols - 1)) / chartCols;
-      const chartHeight = (chartsAreaHeight - vGap * (chartRows - 1)) / chartRows;
+      const chartHeight = (chartsAreaHeight - vGap * (chartRows - 1)) / chartRows + 6;
 
       const selectedChartIds = Array.from(
         document.querySelectorAll(".chart-toggle")
@@ -1448,10 +1552,14 @@
         return { series: processed, minIdx, maxIdx, minY, maxY };
       }
 
-      function idxToYear(idx) {
-        // keep it simple for now; this is cosmetic, not critical
-        return Math.floor(idx / 4);
-      }
+        function idxToYear(idx) {
+        let q = idx % 4;
+        let year = (idx - q) / 4;
+        if (q === 0) {
+            year -= 1;
+        }
+        return year;
+        }
 
       function drawSingleChart(chartId, colIndex, rowIndex) {
         const meta = chartMeta[chartId];
@@ -1616,6 +1724,8 @@
         return;
       }
 
+        const scenarioColorByCol = {}; // colIndex -> [r,g,b]
+
       autoTable.call(pdf, {
         html: tableEl,
         startY: tableTop,
@@ -1643,13 +1753,37 @@
           valign: "middle"
         }),
         didParseCell: function (data) {
-          // If color-coding is enabled, color the second header row (scenario names)
-          if (colorCodeTableHeaders && data.section === "head" && data.row.index === 1) {
-            const scenarioName = String(data.cell.text || "").trim();
-            const match = currentScenarios.find(s => s.name === scenarioName);
-            if (match && match.color) {
-              const rgb = hexToRgb(match.color);
-              data.cell.styles.textColor = [rgb.r, rgb.g, rgb.b];
+          if (!colorCodeTableHeaders) return;
+
+          // 1) Header rows
+          if (data.section === "head") {
+            // Row 0 = variable names (Output Gap, Policy Rate, etc.) -> keep black
+            if (data.row.index === 0) {
+              data.cell.styles.textColor = [0, 0, 0];
+              return;
+            }
+
+            // Row 1 = scenario names -> color by scenario and remember color per column
+            if (data.row.index === 1) {
+              const scenarioName = String(data.cell.text || "").trim();
+              const match = currentScenarios.find(s => s.name === scenarioName);
+              if (match && match.color) {
+                const rgb = hexToRgb(match.color);
+                data.cell.styles.textColor = [rgb.r, rgb.g, rgb.b];
+                scenarioColorByCol[data.column.index] = [rgb.r, rgb.g, rgb.b];
+              } else {
+                // fallback: black if no scenario match
+                data.cell.styles.textColor = [0, 0, 0];
+              }
+            }
+            return;
+          }
+
+          // 2) Body rows -> inherit color from their scenario column if available
+          if (data.section === "body") {
+            const colColor = scenarioColorByCol[data.column.index];
+            if (colColor) {
+              data.cell.styles.textColor = colColor;
             }
           }
         },
@@ -1795,6 +1929,17 @@ function hexToRgb(hex) {
     if (!year || !q) return null;
     return year * 4 + q;
   }
+
+  function indexToPeriod(idx) {
+  if (typeof idx !== "number" || !isFinite(idx)) return null;
+  let q = idx % 4;
+  let year = (idx - q) / 4;
+  if (q === 0) {
+    q = 4;
+    year -= 1;
+  }
+  return year + "Q" + q;
+}
 
   function periodInRange(p, minP, maxP) {
     const idx = parsePeriodToIndex(p);
